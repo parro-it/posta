@@ -2,11 +2,11 @@ package folders
 
 import (
 	"context"
-	"log"
 	"strings"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
+	"github.com/parro-it/posta/actions"
 	"github.com/parro-it/posta/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -17,30 +17,30 @@ type Folder struct {
 	Path    []string
 }
 
-type FoldersResults struct {
-	Folders chan Folder
-	Err     error
-}
-
 type Added struct {
 	Folder Folder
+}
+
+const FOLDERS_ADDED = 1
+
+func (a Added) Type() actions.ActionType {
+	return FOLDERS_ADDED
 }
 
 type Removed struct {
 	Folder Folder
 }
 
-func ReadFolders(ctx context.Context) *FoldersResults {
+var clients []*client.Client
+
+func ReadFolders(ctx context.Context) chan error {
+	errs := make(chan error)
 	g, ctx := errgroup.WithContext(ctx)
 
-	var res FoldersResults
-	res.Folders = make(chan Folder)
-
+	clientCh := make(chan *client.Client)
 	for i, a := range config.Values.Accounts {
 		i, a := i, a
 		g.Go(func() (err error) {
-			log.Printf("Connecting to server %s...", a.Addr)
-
 			var c *client.Client
 			if i == 0 {
 				// Connect to server
@@ -59,11 +59,13 @@ func ReadFolders(ctx context.Context) *FoldersResults {
 				}
 			}
 
-			defer c.Logout()
+			//defer c.Logout()
 
 			if err := c.Login(a.User, a.Pass); err != nil {
 				return err
 			}
+
+			clientCh <- c
 
 			ch := make(chan *imap.MailboxInfo)
 			go func() {
@@ -74,37 +76,22 @@ func ReadFolders(ctx context.Context) *FoldersResults {
 						Account: a.Name,
 						Path:    path,
 					}
-					res.Folders <- f
+					actions.Post(Added{Folder: f})
+
 				}
 			}()
-			return c.List("", "*", ch)
+			err = c.List("", "*", ch)
+			return err
 		})
 	}
 
 	go func() {
-		res.Err = g.Wait()
-		close(res.Folders)
+		for c := range clientCh {
+			clients = append(clients, c)
+		}
+		errs <- g.Wait()
+		close(errs)
 	}()
 
-	return &res
+	return errs
 }
-
-/*
-func main() {
-	config.ParseCommandLine()
-	err := config.Init()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	folders := ReadFolders(context.Background())
-	for m := range folders.Folders {
-		fmt.Println(m.Account, m.Path, m.Name)
-	}
-
-	if folders.Err != nil {
-		log.Fatal(folders.Err)
-	}
-
-}
-*/

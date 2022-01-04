@@ -18,7 +18,7 @@ func NewStore() *gtk.TreeStore {
 	}
 
 	go func() {
-		ch := actions.AddReader()
+		ch := actions.Listen(FOLDERS_ADDED)
 		folders := map[string]*gtk.TreeIter{}
 
 		for a := range ch {

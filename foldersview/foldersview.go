@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/gotk3/gotk3/gtk"
@@ -55,45 +54,27 @@ func createImageColumn(title string, id int) *gtk.TreeViewColumn {
 }
 
 // Creates a tree view and the tree store that holds its data
-func setupTreeView() *gtk.TreeView {
-	treeView, err := gtk.TreeViewNew()
+func setupTreeView() *gtk.ScrolledWindow {
+	tree, err := gtk.TreeViewNew()
 	if err != nil {
 		log.Fatal("Unable to create tree view:", err)
 	}
 
-	treeView.AppendColumn(createImageColumn("Icon", COLUMN_ICON))
-	treeView.AppendColumn(createTextColumn("Version", COLUMN_TEXT))
+	tree.AppendColumn(createImageColumn("Icon", COLUMN_ICON))
+	tree.AppendColumn(createTextColumn("Version", COLUMN_TEXT))
 
 	// Creating a tree store. This is what holds the data that will be shown on our tree view.
-	treeStore := folders.NewStore()
-	treeView.SetModel(treeStore)
+	store := folders.NewStore()
+	tree.SetModel(store)
 
-	return treeView
-}
-
-/*
-// Append a toplevel row to the tree store for the tree view
-func addRow(treeStore *gtk.TreeStore, icon *gdk.Pixbuf, text string) *gtk.TreeIter {
-	return addSubRow(treeStore, nil, icon, text)
-}
-
-// Append a sub row to the tree store for the tree view
-func addSubRow(treeStore *gtk.TreeStore, iter *gtk.TreeIter, icon *gdk.Pixbuf, text string) *gtk.TreeIter {
-	// Get an iterator for a new row at the end of the list store
-	i := treeStore.Append(iter)
-
-	// Set the contents of the tree store row that the iterator represents
-	err := treeStore.SetValue(i, COLUMN_ICON, icon)
+	scroll, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
-		log.Fatal("Unable set value:", err)
+		log.Fatal("Unable to create scroolbox for tree view:", err)
 	}
-	err = treeStore.SetValue(i, COLUMN_TEXT, text)
-	if err != nil {
-		log.Fatal("Unable set value:", err)
-	}
-	return i
+	scroll.Add(tree)
+	return scroll
 }
-*/
+
 // Create and initialize the window
 func setupWindow(title string) *gtk.Window {
 	win, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
@@ -142,39 +123,49 @@ func main() {
 
 	treeView := setupTreeView()
 	win.Add(treeView)
-
 	go func() {
-		f := folders.ReadFolders(context.Background())
-		for f := range f.Folders {
-			fmt.Printf("post aciot for %s\n", f.Name)
-			actions.Post(folders.Added{Folder: f})
-		}
-		if f.Err != nil {
-			log.Fatal(f.Err)
+		err := <-folders.ReadFolders(context.Background())
+		if err != nil {
+			log.Fatal(err)
 		}
 	}()
+
 	/*
-		// Add some rows to the tree store
-		iter1 = addRow(treeStore, imageOK, "Testsuite 1")
-		iter2 = addSubRow(treeStore, iter1, imageOK, "test1-1")
-		iter2 = addSubRow(treeStore, iter1, imageOK, "test1-2")
-		addSubRow(treeStore, iter2, imageOK, "test1-2-1")
-		addSubRow(treeStore, iter2, imageOK, "test1-2-2")
-		addSubRow(treeStore, iter2, imageOK, "test1-2-3")
-		iter2 = addSubRow(treeStore, iter1, imageOK, "test1-3")
-		iter1 = addRow(treeStore, imageFAIL, "Testsuite 2")
-		iter2 = addSubRow(treeStore, iter1, imageOK, "test2-1")
-		iter2 = addSubRow(treeStore, iter1, imageOK, "test2-2")
-		iter2 = addSubRow(treeStore, iter1, imageFAIL, "test2-3")
-		addSubRow(treeStore, iter2, imageOK, "test2-3-1")
-		addSubRow(treeStore, iter2, imageFAIL, "test2-3-2")
+
+		go func() {
+			f := folders.ReadFolders(context.Background())
+			for f := range f.Folders {
+				fmt.Printf("post aciot for %s\n", f.Name)
+				actions.Post(folders.Added{Folder: f})
+			}
+			if f.Err != nil {
+				log.Fatal(f.Err)
+			}
+		}()
+			// Add some rows to the tree store
+			iter1 = addRow(treeStore, imageOK, "Testsuite 1")
+			iter2 = addSubRow(treeStore, iter1, imageOK, "test1-1")
+			iter2 = addSubRow(treeStore, iter1, imageOK, "test1-2")
+			addSubRow(treeStore, iter2, imageOK, "test1-2-1")
+			addSubRow(treeStore, iter2, imageOK, "test1-2-2")
+			addSubRow(treeStore, iter2, imageOK, "test1-2-3")
+			iter2 = addSubRow(treeStore, iter1, imageOK, "test1-3")
+			iter1 = addRow(treeStore, imageFAIL, "Testsuite 2")
+			iter2 = addSubRow(treeStore, iter1, imageOK, "test2-1")
+			iter2 = addSubRow(treeStore, iter1, imageOK, "test2-2")
+			iter2 = addSubRow(treeStore, iter1, imageFAIL, "test2-3")
+			addSubRow(treeStore, iter2, imageOK, "test2-3-1")
+			addSubRow(treeStore, iter2, imageFAIL, "test2-3-2")
 	*/
-	selection, err := treeView.GetSelection()
-	if err != nil {
-		log.Fatal("Could not get tree selection object.")
-	}
-	selection.SetMode(gtk.SELECTION_SINGLE)
-	selection.Connect("changed", treeSelectionChangedCB)
+
+	/*
+		selection, err := treeView.GetSelection()
+		if err != nil {
+			log.Fatal("Could not get tree selection object.")
+		}
+		selection.SetMode(gtk.SELECTION_SINGLE)
+		selection.Connect("changed", treeSelectionChangedCB)
+	*/
 
 	win.ShowAll()
 	gtk.Main()

@@ -1,25 +1,46 @@
 package actions
 
-type Action any
+type Action interface {
+	Type() ActionType
+}
 
 var ch = make(chan Action)
-var newReaders = make(chan chan Action)
+var newReaders = make(chan Listener)
+
+type ActionType int
+
+type Listener struct {
+	ch    chan Action
+	types []ActionType
+}
 
 func Post(a Action) {
 	ch <- a
 }
 
-func AddReader() chan Action {
+func Listen(types ...ActionType) chan Action {
 	r := make(chan Action)
-	newReaders <- r
+	newReaders <- Listener{
+		ch:    r,
+		types: types,
+	}
 	return r
 }
 
+func contains[T comparable](s []T, e T) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func Start() {
-	var readers []chan Action
+	var readers []Listener
 	defer func() {
 		for _, r := range readers {
-			close(r)
+			close(r.ch)
 		}
 		close(newReaders)
 	}()
@@ -27,17 +48,15 @@ func Start() {
 	for {
 		select {
 		case r := <-newReaders:
-			if r == nil {
-				close(ch)
-				return
-			}
 			readers = append(readers, r)
 		case v := <-ch:
 			if v == nil {
 				continue
 			}
 			for _, r := range readers {
-				r <- v
+				if contains(r.types, v.Type()) {
+					r.ch <- v
+				}
 			}
 		}
 	}
