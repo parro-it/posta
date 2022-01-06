@@ -43,7 +43,7 @@ func handleActions(a actions.Action, store *gtk.TreeStore, folders map[string]*g
 		if account, ok = folders[a.Folder.Account]; !ok {
 			account = store.Append(nil)
 			folders[a.Folder.Account] = account
-			err := store.SetValue(account, COLUMN_ICON, imageOK)
+			err := store.SetValue(account, COLUMN_ICON, imageFolder)
 			if err != nil {
 				log.Fatal("Unable set value:", err)
 			}
@@ -66,7 +66,7 @@ func handleActions(a actions.Action, store *gtk.TreeStore, folders map[string]*g
 		i := store.Append(parent)
 		folders[strings.Join(a.Folder.Path, "/")] = i
 		// Set the contents of the tree store row that the iterator represents
-		err := store.SetValue(i, COLUMN_ICON, imageOK)
+		err := store.SetValue(i, COLUMN_ICON, imageFolder)
 		if err != nil {
 			log.Fatal("Unable set value:", err)
 		}
@@ -81,20 +81,15 @@ func handleActions(a actions.Action, store *gtk.TreeStore, folders map[string]*g
 
 // Icons Pixbuf representation
 var (
-	imageOK   *gdk.Pixbuf = nil
-	imageFAIL *gdk.Pixbuf = nil
+	imageFolder *gdk.Pixbuf = nil
 )
 
 // Load the icon image data from file:
 func init() {
-	iconPath := "/mnt/repos/parro-it/posta/foldersview"
+	iconPath := "/mnt/repos/parro-it/posta/"
 
 	var err error
-	imageOK, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/green.png", iconPath))
-	if err != nil {
-		log.Fatal("Unable to load image:", err)
-	}
-	imageFAIL, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/red.png", iconPath))
+	imageFolder, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/folder.png", iconPath))
 	if err != nil {
 		log.Fatal("Unable to load image:", err)
 	}

@@ -40,6 +40,7 @@ func ReadFolders(ctx context.Context) chan error {
 	clientCh := make(chan *client.Client)
 	for i, a := range config.Values.Accounts {
 		i, a := i, a
+
 		g.Go(func() (err error) {
 			var c *client.Client
 			if i == 0 {
@@ -86,12 +87,49 @@ func ReadFolders(ctx context.Context) chan error {
 	}
 
 	go func() {
-		for c := range clientCh {
+		for i := 0; i < len(config.Values.Accounts); i++ {
+			c := <-clientCh
 			clients = append(clients, c)
 		}
+		close(clientCh)
 		errs <- g.Wait()
 		close(errs)
 	}()
 
 	return errs
 }
+
+/*
+func ListenUpdates(ctx context.Context) chan error {
+	errs := make(chan error)
+
+	for _, c := range clients {
+		c := c
+		updates := make(chan client.Update)
+		c.Updates = updates
+		stop := make(chan struct{})
+		done := make(chan error, 1)
+		var stopped bool
+		go func() {
+			done <- c.Idle(stop, nil)
+		}()
+		for {
+			select {
+			case update := <-updates:
+				log.Println("New update:", update)
+				if !stopped {
+					close(stop)
+					stopped = true
+				}
+			case err := <-done:
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Println("Not idling anymore")
+				return errs
+			}
+		}
+	}
+	return errs
+}
+*/
