@@ -3,6 +3,7 @@ package folders
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
@@ -15,6 +16,16 @@ type Folder struct {
 	Name    string
 	Account string
 	Path    []string
+}
+
+type Select struct {
+	Folder Folder
+}
+
+const FOLDERS_SELECT = 4
+
+func (s Select) Type() actions.ActionType {
+	return FOLDERS_SELECT
 }
 
 type Added struct {
@@ -39,6 +50,8 @@ func Start(ctx context.Context) chan error {
 	go func() {
 		g, _ := errgroup.WithContext(ctx)
 		onClientReady := actions.Listen(login.CLIENT_READY)
+		var firstFolderLock sync.RWMutex
+		var firstFolder string
 
 		for clientReady := range onClientReady {
 			clientReady := clientReady.(login.ClientReady)
@@ -56,6 +69,16 @@ func Start(ctx context.Context) chan error {
 							Path:    path,
 						}
 						actions.Post(Added{Folder: f})
+						firstFolderLock.RLock()
+						folder := firstFolder
+						firstFolderLock.RUnlock()
+
+						if folder == "" {
+							firstFolderLock.Lock()
+							firstFolder = f.Name
+							firstFolderLock.Unlock()
+							actions.Post(Select{Folder: f})
+						}
 					}
 				}()
 				err = c.List("", "*", ch)

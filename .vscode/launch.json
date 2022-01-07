@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "/mnt/repos/parro-it/posta/foldersview"
+            "program": "/mnt/repos/parro-it/posta/"
         }
     ]
 }
