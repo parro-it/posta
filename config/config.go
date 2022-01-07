@@ -62,12 +62,11 @@ func Init() error {
 
 // ParseCommandLine ...
 func ParseCommandLine() bool {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+	cfgpath, fail := GetCfgPath()
+	if fail {
 		return true
 	}
-	flag.StringVar(&Values.ConfigFile, "c", filepath.Join(home, ".posta/posta.cfg.toml"), "config file path")
+	flag.StringVar(&Values.ConfigFile, "c", cfgpath, "config file path")
 	//flag.IntVar(&Values.Hours, "h", 3, "number of times a download is retried vefore failing")
 
 	showver := flag.Bool("v", false, "print version to stdout and exit")
@@ -84,4 +83,14 @@ func ParseCommandLine() bool {
 	}
 
 	return false
+}
+
+func GetCfgPath() (string, bool) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return "", true
+	}
+	cfgpath := filepath.Join(home, ".posta/posta.cfg.toml")
+	return cfgpath, false
 }

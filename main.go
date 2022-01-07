@@ -6,8 +6,9 @@ import (
 
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/actions"
-	"github.com/parro-it/posta/config"
+	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
+	"github.com/parro-it/posta/login"
 )
 
 const (
@@ -32,21 +33,24 @@ func mainWindow() *gtk.Window {
 }
 
 func main() {
-	config.ParseCommandLine()
-	err := config.Init()
-	if err != nil {
-		log.Fatal(err)
-	}
 	go actions.Start()
-	gtk.Init(nil)
 
-	win := mainWindow()
-
-	win.Add(folders.View())
 	go func() {
-		err := <-folders.ReadFolders(context.Background())
-		if err != nil {
-			log.Fatal(err)
+		errs := folders.Start(context.Background())
+
+		errs2 := login.Start(context.Background())
+
+		for {
+			select {
+			case e := <-errs:
+				if e != nil {
+					panic(e)
+				}
+			case e := <-errs2:
+				if e != nil {
+					panic(e)
+				}
+			}
 		}
 		/*
 			err = <-folders.ListenUpdates(context.Background())
@@ -55,6 +59,13 @@ func main() {
 			}
 		*/
 	}()
+
+	go app.Instance.Start()
+	gtk.Init(nil)
+
+	win := mainWindow()
+
+	win.Add(folders.View())
 
 	/*
 		selection, err := treeView.GetSelection()

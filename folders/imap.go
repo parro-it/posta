@@ -7,7 +7,7 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/actions"
-	"github.com/parro-it/posta/config"
+	"github.com/parro-it/posta/login"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -33,69 +33,36 @@ type Removed struct {
 
 var clients []*client.Client
 
-func ReadFolders(ctx context.Context) chan error {
+func Start(ctx context.Context) chan error {
+
 	errs := make(chan error)
-	g, ctx := errgroup.WithContext(ctx)
-
-	clientCh := make(chan *client.Client)
-	for i, a := range config.Values.Accounts {
-		i, a := i, a
-
-		g.Go(func() (err error) {
-			var c *client.Client
-			if i == 0 {
-				// Connect to server
-				c, err = client.DialTLS(a.Addr, nil)
-				if err != nil {
-					return
-				}
-			} else {
-				c, err = client.Dial(a.Addr)
-				if err != nil {
-					return
-				}
-				err = c.StartTLS(nil)
-				if err != nil {
-					return
-				}
-			}
-
-			//defer c.Logout()
-
-			if err := c.Login(a.User, a.Pass); err != nil {
-				return err
-			}
-
-			clientCh <- c
-
-			ch := make(chan *imap.MailboxInfo)
-			go func() {
-				for f := range ch {
-					path := strings.Split(f.Name, f.Delimiter)
-					f := Folder{
-						Name:    path[len(path)-1],
-						Account: a.Name,
-						Path:    path,
-					}
-					actions.Post(Added{Folder: f})
-
-				}
-			}()
-			err = c.List("", "*", ch)
-			return err
-		})
-	}
-
 	go func() {
-		for i := 0; i < len(config.Values.Accounts); i++ {
-			c := <-clientCh
-			clients = append(clients, c)
-		}
-		close(clientCh)
-		errs <- g.Wait()
-		close(errs)
-	}()
+		g, _ := errgroup.WithContext(ctx)
+		onClientReady := actions.Listen(login.CLIENT_READY)
 
+		for clientReady := range onClientReady {
+			clientReady := clientReady.(login.ClientReady)
+			c := clientReady.C
+
+			g.Go(func() (err error) {
+
+				ch := make(chan *imap.MailboxInfo)
+				go func() {
+					for f := range ch {
+						path := strings.Split(f.Name, f.Delimiter)
+						f := Folder{
+							Name:    path[len(path)-1],
+							Account: clientReady.Account,
+							Path:    path,
+						}
+						actions.Post(Added{Folder: f})
+					}
+				}()
+				err = c.List("", "*", ch)
+				return err
+			})
+		}
+	}()
 	return errs
 }
 
