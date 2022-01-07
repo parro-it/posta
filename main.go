@@ -9,6 +9,7 @@ import (
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
 	"github.com/parro-it/posta/login"
+	"github.com/parro-it/posta/msgs"
 )
 
 const (
@@ -39,6 +40,7 @@ func main() {
 		errs := folders.Start(context.Background())
 
 		errs2 := login.Start(context.Background())
+		errs3 := msgs.Start(context.Background())
 
 		for {
 			select {
@@ -47,6 +49,11 @@ func main() {
 					panic(e)
 				}
 			case e := <-errs2:
+				if e != nil {
+					panic(e)
+				}
+
+			case e := <-errs3:
 				if e != nil {
 					panic(e)
 				}
