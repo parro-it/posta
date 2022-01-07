@@ -71,8 +71,15 @@ func main() {
 	gtk.Init(nil)
 
 	win := mainWindow()
+	horzCnt, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	win.Add(folders.View())
+	horzCnt.PackStart(folders.View(), true, true, 0)
+	horzCnt.PackStart(msgs.View(), true, true, 0)
+
+	win.Add(horzCnt)
 
 	/*
 		selection, err := treeView.GetSelection()

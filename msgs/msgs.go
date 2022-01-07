@@ -2,7 +2,6 @@ package msgs
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"net/mail"
 	"strings"
@@ -15,18 +14,23 @@ import (
 	"github.com/parro-it/posta/login"
 )
 
-/*
-type ClientReady struct {
-	C       *client.Client
-	Account string
+type Msg struct {
+	Date    string
+	From    string
+	To      string
+	Subject string
 }
 
-const CLIENT_READY = 3
-
-func (a ClientReady) Type() actions.ActionType {
-	return CLIENT_READY
+type AddMsg struct {
+	Msg Msg
 }
-*/
+
+const ADD_MSG = 5
+
+func (a AddMsg) Type() actions.ActionType {
+	return ADD_MSG
+}
+
 func Start(ctx context.Context) chan error {
 	res := make(chan error)
 	var clientsSync sync.Mutex
@@ -60,10 +64,11 @@ func Start(ctx context.Context) chan error {
 				log.Fatal("No message in mailbox")
 			}
 			seqset := new(imap.SeqSet)
-			seqset.AddRange(mbox.Messages, mbox.Messages)
+			seqset.AddRange(mbox.Messages-10, mbox.Messages)
 
+			var section imap.BodySectionName
+			section.Specifier = imap.HeaderSpecifier
 			// Get the whole message body
-			section := &imap.BodySectionName{}
 			items := []imap.FetchItem{section.FetchItem()}
 
 			messages := make(chan *imap.Message, 1)
@@ -73,32 +78,39 @@ func Start(ctx context.Context) chan error {
 			}()
 
 			log.Println("Last message:")
-			msg := <-messages
-			r := msg.GetBody(section)
-			if r == nil {
-				log.Fatal("Server didn't returned message body")
-			}
+			for msg := range messages {
+				r := msg.GetBody(&section)
+				if r == nil {
+					log.Fatal("Server didn't returned message body")
+				}
 
+				m, err := mail.ReadMessage(r)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				header := m.Header
+				log.Println("Date:", header.Get("Date"))
+				log.Println("From:", header.Get("From"))
+				log.Println("To:", header.Get("To"))
+				log.Println("Subject:", header.Get("Subject"))
+				actions.Post(AddMsg{Msg: Msg{
+					Date:    header.Get("Date"),
+					From:    header.Get("From"),
+					To:      header.Get("To"),
+					Subject: header.Get("Subject"),
+				}})
+			}
 			if err := <-done; err != nil {
 				log.Fatal(err)
 			}
-
-			m, err := mail.ReadMessage(r)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			header := m.Header
-			log.Println("Date:", header.Get("Date"))
-			log.Println("From:", header.Get("From"))
-			log.Println("To:", header.Get("To"))
-			log.Println("Subject:", header.Get("Subject"))
-
-			body, err := ioutil.ReadAll(m.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Println(body)
+			/*
+				body, err := ioutil.ReadAll(m.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Println(body)
+			*/
 		}
 
 		close(res)
