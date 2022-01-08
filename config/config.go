@@ -21,10 +21,11 @@ type Type struct {
 }
 
 type Account struct {
-	Addr string
-	User string
-	Pass string
-	Name string
+	Addr     string
+	User     string
+	Pass     string
+	Name     string
+	StartTLS bool
 }
 
 // Values contains the configuration as read from the toml file.
