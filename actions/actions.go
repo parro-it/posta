@@ -9,20 +9,63 @@ var newReaders = make(chan Listener)
 
 type ActionType int
 
-type Listener struct {
+type Listener interface {
+	Post(a Action)
+	Match(a Action) bool
+	Close()
+}
+
+type listener struct {
 	ch    chan Action
 	types []ActionType
 }
 
+func (l listener) Post(a Action) {
+	l.ch <- a
+}
+func (l listener) Close() {
+	close(l.ch)
+}
+func (l listener) Match(a Action) bool {
+	return contains(l.types, a.Type())
+
+}
 func Post(a Action) {
 	ch <- a
 }
 
 func Listen(types ...ActionType) chan Action {
 	r := make(chan Action)
-	newReaders <- Listener{
+	newReaders <- listener{
 		ch:    r,
 		types: types,
+	}
+	return r
+}
+
+type listenerOf[T any] struct {
+	ch chan T
+}
+
+func (l listenerOf[T]) Post(a Action) {
+	l.ch <- a.(T)
+}
+func (l listenerOf[T]) Close() {
+	close(l.ch)
+}
+func (l listenerOf[T]) Match(a Action) bool {
+	switch a.(type) {
+	case T:
+		return true
+	default:
+		return false
+	}
+}
+
+func ListenOf[T any]() chan T {
+	r := make(chan T)
+	newReaders <- listenerOf[T]{
+		ch: r,
 	}
 	return r
 }
@@ -40,7 +83,7 @@ func Start() {
 	var readers []Listener
 	defer func() {
 		for _, r := range readers {
-			close(r.ch)
+			r.Close()
 		}
 		close(newReaders)
 	}()
@@ -54,8 +97,8 @@ func Start() {
 				continue
 			}
 			for _, r := range readers {
-				if contains(r.types, v.Type()) {
-					r.ch <- v
+				if r.Match(v) {
+					r.Post(v)
 				}
 			}
 		}
