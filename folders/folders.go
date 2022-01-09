@@ -54,6 +54,7 @@ func Start(ctx context.Context) chan error {
 		var firstFolder string
 
 		for clientReady := range onClientReady {
+			account := clientReady.Account
 			c := clientReady.C
 
 			g.Go(func() (err error) {
@@ -64,7 +65,7 @@ func Start(ctx context.Context) chan error {
 						path := strings.Split(f.Name, f.Delimiter)
 						f := Folder{
 							Name:    path[len(path)-1],
-							Account: clientReady.Account,
+							Account: account,
 							Path:    path,
 						}
 						actions.Post(Added{Folder: f})
