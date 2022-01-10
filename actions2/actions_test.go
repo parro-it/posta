@@ -11,6 +11,29 @@ import (
 )
 
 func TestActions(t *testing.T) {
+
+	t.Run("unlisten", func(t *testing.T) {
+		q := make(actions2.Queue)
+
+		q.Start()
+		await := make(chan struct{})
+		actions := actions2.ListenFor[int](q)
+
+		go func() {
+			assert.Equal(t, 42, <-actions)
+			close(await)
+		}()
+		q <- 42
+		q.Unlisten(actions)
+		// this call should no block because
+		// no one is listening
+		q <- 43
+
+		<-await
+
+		q.Close()
+	})
+	return
 	t.Run("use make as with channels", func(t *testing.T) {
 		q := make(actions2.Queue)
 
@@ -40,6 +63,7 @@ func TestActions(t *testing.T) {
 		<-await
 		q.Close()
 	})
+
 	t.Run("declare the channel as var", func(t *testing.T) {
 		var q actions2.Queue
 

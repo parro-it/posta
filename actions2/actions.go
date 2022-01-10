@@ -28,7 +28,7 @@ func ListenFor3[T1 any, T2 any, T3 any](q Queue) chan Action {
 	return r
 }
 
-func (q Queue) Unlisten(l listener) {
+func (q Queue) Unlisten(l any) {
 	q <- removeListener{l: l}
 }
 
@@ -53,7 +53,7 @@ func (q Queue) start() {
 			listeners = append(listeners, action.l)
 		case removeListener:
 			for i, l := range listeners {
-				if l == action.l {
+				if l.Equal(action.l) {
 					listeners = append(listeners[0:i], listeners[i+1:]...)
 					l.Close()
 					break
@@ -102,4 +102,5 @@ type listener interface {
 	Post(a Action)
 	// Close the listener.
 	Close()
+	Equal(a any) bool
 }
