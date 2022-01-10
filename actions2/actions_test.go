@@ -23,6 +23,11 @@ func TestActions(t *testing.T) {
 			assert.Equal(t, 42, <-actions)
 			close(await)
 		}()
+
+		// Unlisten non existent listeners
+		// does nothing
+		q.Unlisten(make(chan struct{}))
+
 		q <- 42
 		q.Unlisten(actions)
 		// this call should no block because
@@ -33,7 +38,7 @@ func TestActions(t *testing.T) {
 
 		q.Close()
 	})
-	return
+
 	t.Run("use make as with channels", func(t *testing.T) {
 		q := make(actions2.Queue)
 
@@ -71,6 +76,7 @@ func TestActions(t *testing.T) {
 		checkItSend(q, t, 42)
 		q.Close()
 	})
+
 	t.Run("An unread listener block all queue", func(t *testing.T) {
 		q := make(actions2.Queue)
 
@@ -116,6 +122,60 @@ func TestActions(t *testing.T) {
 		q.Close()
 	})
 
+	t.Run("unlisten on two types", func(t *testing.T) {
+		q := make(actions2.Queue)
+
+		q.Start()
+		await := make(chan struct{})
+		actions := actions2.ListenFor2[int, float64](q)
+
+		go func() {
+			assert.Equal(t, 42, <-actions)
+			assert.Equal(t, 42.42, <-actions)
+			close(await)
+		}()
+		// Unlisten non existent listeners
+		// does nothing
+		q.Unlisten(make(chan struct{}))
+		q <- 42
+		q <- 42.42
+		q <- struct{}{}
+		q.Unlisten(actions)
+		q <- 42
+
+		<-await
+		q.Close()
+	})
+
+	t.Run("unlisten on 3 types", func(t *testing.T) {
+		q := make(actions2.Queue)
+
+		q.Start()
+		await := make(chan struct{})
+		actions := actions2.ListenFor3[int, float64, bool](q)
+
+		go func() {
+			assert.Equal(t, 42, <-actions)
+			assert.Equal(t, 42.42, <-actions)
+			assert.Equal(t, true, <-actions)
+			close(await)
+		}()
+
+		// Unlisten non existent listeners
+		// does nothing
+		q.Unlisten(make(chan struct{}))
+
+		q <- 42
+		q <- 42.42
+		q <- true
+		q <- struct{}{}
+		q.Unlisten(actions)
+		q <- 42
+
+		<-await
+		q.Close()
+	})
+
 	t.Run("listen two types", func(t *testing.T) {
 		q := make(actions2.Queue)
 
@@ -134,6 +194,7 @@ func TestActions(t *testing.T) {
 		<-await
 		q.Close()
 	})
+
 	t.Run("listen 3 types", func(t *testing.T) {
 		q := make(actions2.Queue)
 
@@ -154,6 +215,7 @@ func TestActions(t *testing.T) {
 		<-await
 		q.Close()
 	})
+
 	t.Run("each listener receive its own types", func(t *testing.T) {
 		q := make(actions2.Queue)
 
