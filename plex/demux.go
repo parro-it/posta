@@ -95,6 +95,7 @@ func (q *Demux) Start() {
 		var outputs []output
 
 		defer func() {
+			close(q.commands)
 			for _, out := range outputs {
 				out.Close()
 			}
@@ -102,8 +103,10 @@ func (q *Demux) Start() {
 
 		for {
 			select {
-			case data := <-q.Input:
-				if data == nil {
+			case data, isOpen := <-q.Input:
+				if !isOpen {
+					// the gouroutine terminates when
+					// Input chan is closed
 					return
 				}
 				// forward the item to every reader
@@ -111,9 +114,6 @@ func (q *Demux) Start() {
 					r.Post(data)
 				}
 			case cmd := <-q.commands:
-				if cmd == nil {
-					return
-				}
 				switch cmd := cmd.(type) {
 				case addOut:
 					outputs = append(outputs, cmd.out)
@@ -138,7 +138,6 @@ func (q *Demux) Start() {
 // any listener currently registered
 func (q Demux) Close() {
 	close(q.Input)
-	close(q.commands)
 }
 
 // an internal interface needed
