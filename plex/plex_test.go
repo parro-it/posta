@@ -1,23 +1,23 @@
-package actions2_test
+package plex_test
 
 import (
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/parro-it/posta/actions2"
+	"github.com/parro-it/posta/plex"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestActions(t *testing.T) {
+func TestDemux(t *testing.T) {
 
 	t.Run("unlisten", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
-		actions := actions2.ListenFor[int](q)
+		actions := plex.AddOut[int](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -26,10 +26,10 @@ func TestActions(t *testing.T) {
 
 		// Unlisten non existent listeners
 		// does nothing
-		q.Unlisten(make(chan struct{}))
+		q.RemoveOut(make(chan struct{}))
 
 		q <- 42
-		q.Unlisten(actions)
+		q.RemoveOut(actions)
 		// this call should no block because
 		// no one is listening
 		q <- 43
@@ -40,13 +40,13 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("use make as with channels", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		require.NotNil(t, q)
 	})
 
 	t.Run("Start-Close", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		<-time.After(20 * time.Millisecond)
@@ -54,11 +54,11 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("Send on single type", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
-		actions := actions2.ListenFor[int](q)
+		actions := plex.AddOut[int](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -70,7 +70,7 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("declare the channel as var", func(t *testing.T) {
-		var q actions2.Queue
+		var q plex.Demux
 
 		q = q.Start()
 		checkItSend(q, t, 42)
@@ -78,13 +78,13 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("An unread listener block all queue", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 
 		// this listener will
 		// never be readed...
-		actions2.ListenFor[int](q)
+		plex.AddOut[int](q)
 
 		// this send doesn't block,
 		// but the start goroutine
@@ -106,12 +106,12 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("send types with no listener doesn't block", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
 		go func() {
-			actions := actions2.ListenFor[int](q)
+			actions := plex.AddOut[int](q)
 			assert.Equal(t, 42, <-actions)
 			close(await)
 		}()
@@ -123,11 +123,11 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("unlisten on two types", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
-		actions := actions2.ListenFor2[int, float64](q)
+		actions := plex.AddOut2[int, float64](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -136,11 +136,11 @@ func TestActions(t *testing.T) {
 		}()
 		// Unlisten non existent listeners
 		// does nothing
-		q.Unlisten(make(chan struct{}))
+		q.RemoveOut(make(chan struct{}))
 		q <- 42
 		q <- 42.42
 		q <- struct{}{}
-		q.Unlisten(actions)
+		q.RemoveOut(actions)
 		q <- 42
 
 		<-await
@@ -148,11 +148,11 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("unlisten on 3 types", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
-		actions := actions2.ListenFor3[int, float64, bool](q)
+		actions := plex.AddOut3[int, float64, bool](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -163,13 +163,13 @@ func TestActions(t *testing.T) {
 
 		// Unlisten non existent listeners
 		// does nothing
-		q.Unlisten(make(chan struct{}))
+		q.RemoveOut(make(chan struct{}))
 
 		q <- 42
 		q <- 42.42
 		q <- true
 		q <- struct{}{}
-		q.Unlisten(actions)
+		q.RemoveOut(actions)
 		q <- 42
 
 		<-await
@@ -177,11 +177,11 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("listen two types", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
-		actions := actions2.ListenFor2[int, float64](q)
+		actions := plex.AddOut2[int, float64](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -196,11 +196,11 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("listen 3 types", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := make(chan struct{})
-		actions := actions2.ListenFor3[int, float64, bool](q)
+		actions := plex.AddOut3[int, float64, bool](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -217,13 +217,13 @@ func TestActions(t *testing.T) {
 	})
 
 	t.Run("each listener receive its own types", func(t *testing.T) {
-		q := make(actions2.Queue)
+		q := make(plex.Demux)
 
 		q.Start()
 		await := sync.WaitGroup{}
 		await.Add(2)
-		ints := actions2.ListenFor[int](q)
-		floats := actions2.ListenFor[float64](q)
+		ints := plex.AddOut[int](q)
+		floats := plex.AddOut[float64](q)
 
 		go func() {
 			assert.Equal(t, 42, <-ints)
@@ -242,9 +242,9 @@ func TestActions(t *testing.T) {
 
 }
 
-func checkItSend[T any](q actions2.Queue, t *testing.T, value T) {
+func checkItSend[T any](q plex.Demux, t *testing.T, value T) {
 	await := make(chan struct{})
-	results := actions2.ListenFor[T](q)
+	results := plex.AddOut[T](q)
 
 	var res T
 	go func() {
