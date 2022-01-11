@@ -9,6 +9,24 @@ package plex
 // methods. Newly added channels will only
 // receives data sent to the input chan after
 // they was added.
+//
+// Demux has an internal goroutine
+// that do the demultiplexing that
+// must be started by calling the Start
+// methods.
+//
+// An existing channel could be used
+// by setting Input field before calling
+// Start method. Start method create a chan
+// if the field is nil.
+//
+// Values could be sent to the Input field
+// channel, after Start method is called.
+//
+// It's an error to set Input field after
+// Start method is called.
+// It's an error to send to Input field channel before
+// Start method is called.
 type Demux struct {
 	Input    chan any
 	commands chan any
