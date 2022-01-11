@@ -4,13 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/parro-it/posta/actions"
 	"github.com/parro-it/posta/app"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStart(t *testing.T) {
-	go actions.Start()
+	go app.Instance.Actions.Start()
 
 	errs := Start(context.Background())
 	go app.Instance.Start()

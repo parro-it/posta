@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/emersion/go-imap/client"
-	"github.com/parro-it/posta/actions"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/config"
+	"github.com/parro-it/posta/plex"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -15,18 +15,11 @@ type ClientReady struct {
 	Account string
 }
 
-const CLIENT_READY = 3
-
-func (a ClientReady) Type() actions.ActionType {
-	return CLIENT_READY
-}
-
 func Start(ctx context.Context) chan error {
 	res := make(chan error)
 	go func() {
 		defer close(res)
-		awaitStart := actions.Listen(app.APP_STARTED)
-		<-awaitStart
+		<-plex.AddOut[app.AppStarted](app.Instance.Actions)
 
 		errs := make(chan error)
 		g, _ := errgroup.WithContext(ctx)
@@ -56,8 +49,7 @@ func Start(ctx context.Context) chan error {
 				if err := c.Login(a.User, a.Pass); err != nil {
 					return err
 				}
-
-				actions.Post(ClientReady{C: c, Account: a.Name})
+				app.Instance.Actions.Input <- ClientReady{C: c, Account: a.Name}
 
 				return err
 			})

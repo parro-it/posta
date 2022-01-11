@@ -9,9 +9,10 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
-	"github.com/parro-it/posta/actions"
+	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
 	"github.com/parro-it/posta/login"
+	"github.com/parro-it/posta/plex"
 )
 
 type Msg struct {
@@ -25,21 +26,14 @@ type AddMsg struct {
 	Msg Msg
 }
 
-const ADD_MSG = 5
-
-func (a AddMsg) Type() actions.ActionType {
-	return ADD_MSG
-}
-
 func Start(ctx context.Context) chan error {
 	res := make(chan error)
 	var clientsSync sync.Mutex
 	var clientsMap = map[string]*client.Client{}
 
 	go func() {
-		clients := actions.Listen(login.CLIENT_READY)
-		for c := range clients {
-			cr := c.(login.ClientReady)
+		clients := plex.AddOut[login.ClientReady](app.Instance.Actions)
+		for cr := range clients {
 			clientsSync.Lock()
 			clientsMap[cr.Account] = cr.C
 			clientsSync.Unlock()
@@ -48,13 +42,13 @@ func Start(ctx context.Context) chan error {
 
 	go func() {
 		defer close(res)
-		selectedFolders := actions.Listen(folders.FOLDERS_SELECT)
-		for selectedFolder := range selectedFolders {
-			fs := selectedFolder.(folders.Select)
+		selectedFolders := plex.AddOut[folders.Select](app.Instance.Actions)
+
+		for fold := range selectedFolders {
 			clientsSync.Lock()
-			c := clientsMap[fs.Folder.Account]
+			c := clientsMap[fold.Folder.Account]
 			clientsSync.Unlock()
-			mbox, err := c.Select(strings.Join(fs.Folder.Path, "/"), false)
+			mbox, err := c.Select(strings.Join(fold.Folder.Path, "/"), false)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -94,12 +88,12 @@ func Start(ctx context.Context) chan error {
 				log.Println("From:", header.Get("From"))
 				log.Println("To:", header.Get("To"))
 				log.Println("Subject:", header.Get("Subject"))
-				actions.Post(AddMsg{Msg: Msg{
+				app.Instance.Actions.Input <- AddMsg{Msg: Msg{
 					Date:    header.Get("Date"),
 					From:    header.Get("From"),
 					To:      header.Get("To"),
 					Subject: header.Get("Subject"),
-				}})
+				}}
 			}
 			if err := <-done; err != nil {
 				log.Fatal(err)

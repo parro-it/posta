@@ -5,7 +5,8 @@ import (
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/parro-it/posta/actions"
+	"github.com/parro-it/posta/app"
+	"github.com/parro-it/posta/plex"
 )
 
 func NewStore() *gtk.TreeStore {
@@ -15,7 +16,8 @@ func NewStore() *gtk.TreeStore {
 	}
 
 	go func() {
-		ch := actions.Listen(ADD_MSG)
+		ch := plex.AddOut[AddMsg](app.Instance.Actions)
+
 		//folders := map[string]*gtk.TreeIter{}
 
 		for a := range ch {
@@ -30,7 +32,7 @@ func NewStore() *gtk.TreeStore {
 	return store
 }
 
-func handleActions(a actions.Action, store *gtk.TreeStore) {
+func handleActions(a any, store *gtk.TreeStore) {
 	switch a := a.(type) {
 	case AddMsg:
 		m := a.Msg

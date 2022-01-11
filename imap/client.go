@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/emersion/go-imap/client"
-	"github.com/parro-it/posta/actions"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/config"
+	"github.com/parro-it/posta/plex"
 )
 
 type clientEntry struct {
@@ -23,9 +23,8 @@ func Client(ctx context.Context) chan error {
 	res := make(chan error)
 	go func() {
 		defer close(res)
-		aa := actions.Listen(QUERY_CLIENT)
-
-		<-actions.Listen(app.APP_STARTED)
+		aa := plex.AddOut[QueryClient](app.Instance.Actions)
+		<-plex.AddOut[app.AppStarted](app.Instance.Actions)
 
 		clientsConfig := map[string]clientEntry{}
 
@@ -35,43 +34,40 @@ func Client(ctx context.Context) chan error {
 			clientsConfig[a.Name] = clientEntry{a, nil}
 		}
 
-		for action := range aa {
-			switch a := action.(type) {
-			case QueryClient:
-				ce, found := clientsConfig[a.AccountName]
-				if !found {
-					close(a.Res)
-					continue
-				}
+		for a := range aa {
+			ce, found := clientsConfig[a.AccountName]
+			if !found {
+				close(a.Res)
+				continue
+			}
 
-				if ce.Client == nil {
-					var err error
-					if ce.Account.StartTLS {
-						if ce.Client, err = client.Dial(ce.Account.Addr); err != nil {
-							res <- err
-							return
-						}
-
-						if err = ce.Client.StartTLS(nil); err != nil {
-							res <- err
-							return
-						}
-
-					} else {
-
-						// Connect to server
-						if ce.Client, err = client.DialTLS(ce.Account.Addr, nil); err != nil {
-							res <- err
-							return
-						}
+			if ce.Client == nil {
+				var err error
+				if ce.Account.StartTLS {
+					if ce.Client, err = client.Dial(ce.Account.Addr); err != nil {
+						res <- err
+						return
 					}
 
+					if err = ce.Client.StartTLS(nil); err != nil {
+						res <- err
+						return
+					}
+
+				} else {
+
+					// Connect to server
+					if ce.Client, err = client.DialTLS(ce.Account.Addr, nil); err != nil {
+						res <- err
+						return
+					}
 				}
 
-				a.Res <- ce.Client
-				close(a.Res)
-
 			}
+
+			a.Res <- ce.Client
+			close(a.Res)
+
 		}
 
 	}()
@@ -81,10 +77,4 @@ func Client(ctx context.Context) chan error {
 type QueryClient struct {
 	Res         chan *client.Client
 	AccountName string
-}
-
-const QUERY_CLIENT = 9
-
-func (a QueryClient) Type() actions.ActionType {
-	return QUERY_CLIENT
 }

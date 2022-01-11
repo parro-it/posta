@@ -3,19 +3,14 @@ package app
 import (
 	"log"
 
-	"github.com/parro-it/posta/actions"
 	"github.com/parro-it/posta/config"
+	"github.com/parro-it/posta/plex"
 )
 
 type AppStarted struct{}
 
-const APP_STARTED = 2
-
-func (a AppStarted) Type() actions.ActionType {
-	return APP_STARTED
-}
-
 type App struct {
+	Actions plex.Demux[any]
 }
 
 var Instance App
@@ -32,6 +27,6 @@ func (a App) Start() {
 		log.Fatal(err)
 	}
 
-	actions.Post(AppStarted{})
+	a.Actions.Input <- AppStarted{}
 
 }

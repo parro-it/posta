@@ -7,8 +7,9 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
-	"github.com/parro-it/posta/actions"
+	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/login"
+	"github.com/parro-it/posta/plex"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -22,20 +23,8 @@ type Select struct {
 	Folder Folder
 }
 
-const FOLDERS_SELECT = 4
-
-func (s Select) Type() actions.ActionType {
-	return FOLDERS_SELECT
-}
-
 type Added struct {
 	Folder Folder
-}
-
-const FOLDERS_ADDED = 1
-
-func (a Added) Type() actions.ActionType {
-	return FOLDERS_ADDED
 }
 
 type Removed struct {
@@ -49,7 +38,7 @@ func Start(ctx context.Context) chan error {
 	errs := make(chan error)
 	go func() {
 		g, _ := errgroup.WithContext(ctx)
-		onClientReady := actions.ListenOf[login.ClientReady]()
+		onClientReady := plex.AddOut[login.ClientReady](app.Instance.Actions)
 		var firstFolderLock sync.RWMutex
 		var firstFolder string
 
@@ -68,7 +57,7 @@ func Start(ctx context.Context) chan error {
 							Account: account,
 							Path:    path,
 						}
-						actions.Post(Added{Folder: f})
+						app.Instance.Actions.Input <- Added{Folder: f}
 						firstFolderLock.RLock()
 						folder := firstFolder
 						firstFolderLock.RUnlock()
@@ -77,7 +66,7 @@ func Start(ctx context.Context) chan error {
 							firstFolderLock.Lock()
 							firstFolder = f.Name
 							firstFolderLock.Unlock()
-							actions.Post(Select{Folder: f})
+							app.Instance.Actions.Input <- Select{Folder: f}
 						}
 					}
 				}()
