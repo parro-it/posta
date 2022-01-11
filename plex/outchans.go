@@ -30,9 +30,11 @@ type outOf2[T1 any, T2 any] chan any
 func (l outOf2[T1, T2]) Post(a any) {
 	if aa, isReqType := a.(T1); isReqType {
 		l <- aa
+		return
 	}
 	if aa, isReqType := a.(T2); isReqType {
 		l <- aa
+		return
 	}
 }
 
@@ -58,13 +60,15 @@ func (l outOf3[T1, T2, T3]) Equal(a any) bool {
 func (l outOf3[T1, T2, T3]) Post(a any) {
 	if aa, isReqType := a.(T1); isReqType {
 		l <- aa
+		return
 	}
 	if aa, isReqType := a.(T2); isReqType {
 		l <- aa
+		return
 	}
-
 	if aa, isReqType := a.(T3); isReqType {
 		l <- aa
+		return
 	}
 }
 

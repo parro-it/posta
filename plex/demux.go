@@ -64,16 +64,14 @@ func (q Demux) RemoveOut(l any) {
 // The first two types cause the addition and removal
 // of outputs, closeReq completely closes the
 // Demux and terminates the gouroutin itself.
-func (q Demux) Start() Demux {
-	if q == nil {
-		q = make(Demux)
-	}
-	go q.start()
-	return q
-}
-
-func (q Demux) start() {
+func (q Demux) Start() {
 	var outputs []output
+
+	defer func() {
+		for _, out := range outputs {
+			out.Close()
+		}
+	}()
 
 	for data := range q {
 		switch msg := data.(type) {
@@ -87,11 +85,6 @@ func (q Demux) start() {
 					break
 				}
 			}
-		case closeReq:
-			for _, out := range outputs {
-				out.Close()
-			}
-			break
 		default:
 			// forward the item to every reader
 			for _, r := range outputs {
@@ -102,15 +95,11 @@ func (q Demux) start() {
 	}
 }
 
-// an empty type to signal the goroutine
-// to exit
-type closeReq struct{}
-
 // Close stops the gouroutine started
 // by Start method. Also close
 // any listener currently registered
 func (q Demux) Close() {
-	q <- closeReq{}
+	close(q)
 }
 
 // an internal interface needed

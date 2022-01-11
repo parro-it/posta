@@ -7,90 +7,82 @@ import (
 
 	"github.com/parro-it/posta/plex"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDemux(t *testing.T) {
-
-	t.Run("unlisten", func(t *testing.T) {
+	t.Run("Send with 2 output channels", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
-		await := make(chan struct{})
-		actions := plex.AddOut[int](q)
+		go q.Start()
+		// close the demux once done
+		defer q.Close()
+
+		results1 := make(chan interface{})
+		results2 := make(chan interface{})
+		ints1 := plex.AddOut[int](q)
+		ints2 := plex.AddOut[int](q)
 
 		go func() {
-			assert.Equal(t, 42, <-actions)
-			close(await)
+			results1 <- <-ints1
+			close(results1)
+		}()
+		go func() {
+			results2 <- <-ints2
+			close(results2)
 		}()
 
-		// Unlisten non existent listeners
-		// does nothing
+		q <- 42
+		assert.Equal(t, 42, <-results1)
+		assert.Equal(t, 42, <-results2)
+	})
+
+	t.Run("RemoveOut", func(t *testing.T) {
+		q := make(plex.Demux)
+
+		go q.Start()
+		// close the demux once done
+		defer q.Close()
+
+		results := make(chan interface{})
+		ints := plex.AddOut[int](q)
+
+		go func() {
+			results <- <-ints
+			close(results)
+		}()
+
+		// Pass non registered chans
+		// to RemoveOut is a noop
 		q.RemoveOut(make(chan struct{}))
 
+		// this value will be read by the
+		// goroutine above
 		q <- 42
-		q.RemoveOut(actions)
+
 		// this call should no block because
-		// no one is listening
+		// no output channel is present, after
+		// ints is removed
+		q.RemoveOut(ints)
 		q <- 43
 
-		<-await
+		assert.Equal(t, 42, <-results)
 
-		q.Close()
 	})
 
-	t.Run("use make as with channels", func(t *testing.T) {
+	t.Run("An unread output chan blocks all queue", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		require.NotNil(t, q)
-	})
+		go q.Start()
 
-	t.Run("Start-Close", func(t *testing.T) {
-		q := make(plex.Demux)
-
-		q.Start()
-		<-time.After(20 * time.Millisecond)
-		q.Close()
-	})
-
-	t.Run("Send on single type", func(t *testing.T) {
-		q := make(plex.Demux)
-
-		q.Start()
-		await := make(chan struct{})
-		actions := plex.AddOut[int](q)
-
-		go func() {
-			assert.Equal(t, 42, <-actions)
-			close(await)
-		}()
-		q <- 42
-		<-await
-		q.Close()
-	})
-
-	t.Run("declare the channel as var", func(t *testing.T) {
-		var q plex.Demux
-
-		q = q.Start()
-		checkItSend(q, t, 42)
-		q.Close()
-	})
-
-	t.Run("An unread listener block all queue", func(t *testing.T) {
-		q := make(plex.Demux)
-
-		q.Start()
-
-		// this listener will
+		// this output will
 		// never be readed...
 		plex.AddOut[int](q)
 
 		// this send doesn't block,
 		// but the start goroutine
-		// will get blocked while sending
-		// the value to an unreaded
-		// listener channel
+		// will consequently get blocked
+		// while forwarding the value to
+		// an unread output channel
 		q <- 42
 
 		select {
@@ -105,10 +97,10 @@ func TestDemux(t *testing.T) {
 
 	})
 
-	t.Run("send types with no listener doesn't block", func(t *testing.T) {
+	t.Run("Send types with matching output doesn't block", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
+		go q.Start()
 		await := make(chan struct{})
 		go func() {
 			actions := plex.AddOut[int](q)
@@ -122,10 +114,10 @@ func TestDemux(t *testing.T) {
 		q.Close()
 	})
 
-	t.Run("unlisten on two types", func(t *testing.T) {
+	t.Run("RemoveOut on two types", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
+		go q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut2[int, float64](q)
 
@@ -147,10 +139,10 @@ func TestDemux(t *testing.T) {
 		q.Close()
 	})
 
-	t.Run("unlisten on 3 types", func(t *testing.T) {
+	t.Run("RemoveOut on 3 types", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
+		go q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut3[int, float64, bool](q)
 
@@ -176,10 +168,10 @@ func TestDemux(t *testing.T) {
 		q.Close()
 	})
 
-	t.Run("listen two types", func(t *testing.T) {
+	t.Run("AddOut2", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
+		go q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut2[int, float64](q)
 
@@ -195,10 +187,10 @@ func TestDemux(t *testing.T) {
 		q.Close()
 	})
 
-	t.Run("listen 3 types", func(t *testing.T) {
+	t.Run("AddOut3", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
+		go q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut3[int, float64, bool](q)
 
@@ -216,10 +208,10 @@ func TestDemux(t *testing.T) {
 		q.Close()
 	})
 
-	t.Run("each listener receive its own types", func(t *testing.T) {
+	t.Run("Each channel receive its own types", func(t *testing.T) {
 		q := make(plex.Demux)
 
-		q.Start()
+		go q.Start()
 		await := sync.WaitGroup{}
 		await.Add(2)
 		ints := plex.AddOut[int](q)
@@ -240,18 +232,4 @@ func TestDemux(t *testing.T) {
 		q.Close()
 	})
 
-}
-
-func checkItSend[T any](q plex.Demux, t *testing.T, value T) {
-	await := make(chan struct{})
-	results := plex.AddOut[T](q)
-
-	var res T
-	go func() {
-		res = <-results
-		close(await)
-	}()
-	q <- value
-	<-await
-	assert.Equal(t, value, res)
 }
