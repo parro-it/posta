@@ -9,7 +9,10 @@ package plex
 // methods. Newly added channels will only
 // receives data sent to the input chan after
 // they was added.
-type Demux chan any
+type Demux struct {
+	Input    chan any
+	commands chan any
+}
 
 // AddOut creates a new chan T
 // and add it to the set of output
@@ -18,7 +21,7 @@ type Demux chan any
 // sent messages of type T
 func AddOut[T any](q Demux) chan T {
 	r := make(chan T)
-	q <- addOut{out: outOf[T](r)}
+	q.commands <- addOut{out: outOf[T](r)}
 	return r
 }
 
@@ -29,7 +32,7 @@ func AddOut[T any](q Demux) chan T {
 // sent messages of type T1 or T2
 func AddOut2[T1 any, T2 any](q Demux) chan any {
 	r := make(chan any)
-	q <- addOut{out: outOf2[T1, T2](r)}
+	q.commands <- addOut{out: outOf2[T1, T2](r)}
 	return r
 }
 
@@ -40,7 +43,7 @@ func AddOut2[T1 any, T2 any](q Demux) chan any {
 // sent messages of type T1 or T2 or T3
 func AddOut3[T1 any, T2 any, T3 any](q Demux) chan any {
 	r := make(chan any)
-	q <- addOut{out: outOf3[T1, T2, T3](r)}
+	q.commands <- addOut{out: outOf3[T1, T2, T3](r)}
 	return r
 }
 
@@ -49,7 +52,7 @@ func AddOut3[T1 any, T2 any, T3 any](q Demux) chan any {
 // The output channel is also closed
 // after it has been removed.
 func (q Demux) RemoveOut(l any) {
-	q <- removeOut{out: l}
+	q.commands <- removeOut{out: l}
 }
 
 // Start the internal gouroutine that
@@ -64,42 +67,60 @@ func (q Demux) RemoveOut(l any) {
 // The first two types cause the addition and removal
 // of outputs, closeReq completely closes the
 // Demux and terminates the gouroutin itself.
-func (q Demux) Start() {
-	var outputs []output
+func (q *Demux) Start() {
+	q.commands = make(chan any)
+	if q.Input == nil {
+		q.Input = make(chan any)
+	}
 
-	defer func() {
-		for _, out := range outputs {
-			out.Close()
+	go func() {
+		var outputs []output
+
+		defer func() {
+			for _, out := range outputs {
+				out.Close()
+			}
+		}()
+
+		for {
+			select {
+			case data := <-q.Input:
+				if data == nil {
+					return
+				}
+				// forward the item to every reader
+				for _, r := range outputs {
+					r.Post(data)
+				}
+			case cmd := <-q.commands:
+				if cmd == nil {
+					return
+				}
+				switch cmd := cmd.(type) {
+				case addOut:
+					outputs = append(outputs, cmd.out)
+				case removeOut:
+					for i, out := range outputs {
+						if out.Equal(cmd.out) {
+							outputs = append(outputs[0:i], outputs[i+1:]...)
+							out.Close()
+							break
+						}
+					}
+
+				}
+			}
 		}
 	}()
 
-	for data := range q {
-		switch msg := data.(type) {
-		case addOut:
-			outputs = append(outputs, msg.out)
-		case removeOut:
-			for i, out := range outputs {
-				if out.Equal(msg.out) {
-					outputs = append(outputs[0:i], outputs[i+1:]...)
-					out.Close()
-					break
-				}
-			}
-		default:
-			// forward the item to every reader
-			for _, r := range outputs {
-				r.Post(msg)
-			}
-		}
-
-	}
 }
 
 // Close stops the gouroutine started
 // by Start method. Also close
 // any listener currently registered
 func (q Demux) Close() {
-	close(q)
+	close(q.Input)
+	close(q.commands)
 }
 
 // an internal interface needed

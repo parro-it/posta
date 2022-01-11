@@ -11,9 +11,9 @@ import (
 
 func TestDemux(t *testing.T) {
 	t.Run("Send with 2 output channels", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		// close the demux once done
 		defer q.Close()
 
@@ -31,15 +31,15 @@ func TestDemux(t *testing.T) {
 			close(results2)
 		}()
 
-		q <- 42
+		q.Input <- 42
 		assert.Equal(t, 42, <-results1)
 		assert.Equal(t, 42, <-results2)
 	})
 
 	t.Run("RemoveOut", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		// close the demux once done
 		defer q.Close()
 
@@ -57,22 +57,22 @@ func TestDemux(t *testing.T) {
 
 		// this value will be read by the
 		// goroutine above
-		q <- 42
+		q.Input <- 42
 
 		// this call should no block because
 		// no output channel is present, after
 		// ints is removed
 		q.RemoveOut(ints)
-		q <- 43
+		q.Input <- 43
 
 		assert.Equal(t, 42, <-results)
 
 	})
 
 	t.Run("An unread output chan blocks all queue", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 
 		// this output will
 		// never be readed...
@@ -83,11 +83,11 @@ func TestDemux(t *testing.T) {
 		// will consequently get blocked
 		// while forwarding the value to
 		// an unread output channel
-		q <- 42
+		q.Input <- 42
 
 		select {
 		case <-time.After(20 * time.Millisecond):
-		case q <- 42:
+		case q.Input <- 42:
 			assert.Fail(t, "The write is expected to timeout")
 		}
 
@@ -98,9 +98,9 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("Send types with matching output doesn't block", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		await := make(chan struct{})
 		go func() {
 			actions := plex.AddOut[int](q)
@@ -108,16 +108,16 @@ func TestDemux(t *testing.T) {
 			close(await)
 		}()
 		<-time.After(20 * time.Millisecond)
-		q <- 42.42
-		q <- 42
+		q.Input <- 42.42
+		q.Input <- 42
 		<-await
 		q.Close()
 	})
 
 	t.Run("RemoveOut on two types", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut2[int, float64](q)
 
@@ -129,20 +129,20 @@ func TestDemux(t *testing.T) {
 		// Unlisten non existent listeners
 		// does nothing
 		q.RemoveOut(make(chan struct{}))
-		q <- 42
-		q <- 42.42
-		q <- struct{}{}
+		q.Input <- 42
+		q.Input <- 42.42
+		q.Input <- struct{}{}
 		q.RemoveOut(actions)
-		q <- 42
+		q.Input <- 42
 
 		<-await
 		q.Close()
 	})
 
 	t.Run("RemoveOut on 3 types", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut3[int, float64, bool](q)
 
@@ -157,21 +157,21 @@ func TestDemux(t *testing.T) {
 		// does nothing
 		q.RemoveOut(make(chan struct{}))
 
-		q <- 42
-		q <- 42.42
-		q <- true
-		q <- struct{}{}
+		q.Input <- 42
+		q.Input <- 42.42
+		q.Input <- true
+		q.Input <- struct{}{}
 		q.RemoveOut(actions)
-		q <- 42
+		q.Input <- 42
 
 		<-await
 		q.Close()
 	})
 
 	t.Run("AddOut2", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut2[int, float64](q)
 
@@ -180,17 +180,17 @@ func TestDemux(t *testing.T) {
 			assert.Equal(t, 42.42, <-actions)
 			close(await)
 		}()
-		q <- 42
-		q <- 42.42
-		q <- struct{}{}
+		q.Input <- 42
+		q.Input <- 42.42
+		q.Input <- struct{}{}
 		<-await
 		q.Close()
 	})
 
 	t.Run("AddOut3", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		await := make(chan struct{})
 		actions := plex.AddOut3[int, float64, bool](q)
 
@@ -200,18 +200,18 @@ func TestDemux(t *testing.T) {
 			assert.Equal(t, true, <-actions)
 			close(await)
 		}()
-		q <- 42
-		q <- 42.42
-		q <- true
-		q <- struct{}{}
+		q.Input <- 42
+		q.Input <- 42.42
+		q.Input <- true
+		q.Input <- struct{}{}
 		<-await
 		q.Close()
 	})
 
 	t.Run("Each channel receive its own types", func(t *testing.T) {
-		q := make(plex.Demux)
+		var q plex.Demux
 
-		go q.Start()
+		q.Start()
 		await := sync.WaitGroup{}
 		await.Add(2)
 		ints := plex.AddOut[int](q)
@@ -226,8 +226,8 @@ func TestDemux(t *testing.T) {
 			await.Done()
 		}()
 		<-time.After(20 * time.Millisecond)
-		q <- 42.42
-		q <- 42
+		q.Input <- 42.42
+		q.Input <- 42
 		await.Wait()
 		q.Close()
 	})
