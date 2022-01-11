@@ -11,7 +11,7 @@ import (
 
 func TestDemux(t *testing.T) {
 	t.Run("Send with 2 output channels", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[int]
 
 		q.Start()
 		// close the demux once done
@@ -37,7 +37,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("RemoveOut", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[int]
 
 		q.Start()
 		// close the demux once done
@@ -70,7 +70,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("An unread output chan blocks all queue", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[int]
 
 		q.Start()
 
@@ -98,7 +98,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("Send types with matching output doesn't block", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
@@ -115,7 +115,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("RemoveOut on two types", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
@@ -140,7 +140,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("RemoveOut on 3 types", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
@@ -169,7 +169,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("AddOut2", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
@@ -188,7 +188,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("AddOut3", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
@@ -209,7 +209,7 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("Each channel receive its own types", func(t *testing.T) {
-		var q plex.Demux
+		var q plex.Demux[any]
 
 		q.Start()
 		await := sync.WaitGroup{}

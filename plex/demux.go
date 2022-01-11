@@ -27,8 +27,8 @@ package plex
 // Start method is called.
 // It's an error to send to Input field channel before
 // Start method is called.
-type Demux struct {
-	Input    chan any
+type Demux[T any] struct {
+	Input    chan T
 	commands chan any
 }
 
@@ -37,7 +37,7 @@ type Demux struct {
 // channels.
 // The new output will only receive
 // sent messages of type T
-func AddOut[T any](q Demux) chan T {
+func AddOut[T any, TInput any](q Demux[TInput]) chan T {
 	r := make(chan T)
 	q.commands <- addOut{out: outOf[T](r)}
 	return r
@@ -48,7 +48,7 @@ func AddOut[T any](q Demux) chan T {
 // channels.
 // The new output will only receive
 // sent messages of type T1 or T2
-func AddOut2[T1 any, T2 any](q Demux) chan any {
+func AddOut2[T1 any, T2 any, TInput any](q Demux[TInput]) chan any {
 	r := make(chan any)
 	q.commands <- addOut{out: outOf2[T1, T2](r)}
 	return r
@@ -59,7 +59,7 @@ func AddOut2[T1 any, T2 any](q Demux) chan any {
 // channels.
 // The new output will only receive
 // sent messages of type T1 or T2 or T3
-func AddOut3[T1 any, T2 any, T3 any](q Demux) chan any {
+func AddOut3[T1 any, T2 any, T3 any, TInput any](q Demux[TInput]) chan any {
 	r := make(chan any)
 	q.commands <- addOut{out: outOf3[T1, T2, T3](r)}
 	return r
@@ -69,7 +69,7 @@ func AddOut3[T1 any, T2 any, T3 any](q Demux) chan any {
 // the set of registered ones.
 // The output channel is also closed
 // after it has been removed.
-func (q Demux) RemoveOut(l any) {
+func (q Demux[_]) RemoveOut(l any) {
 	q.commands <- removeOut{out: l}
 }
 
@@ -85,10 +85,10 @@ func (q Demux) RemoveOut(l any) {
 // The first two types cause the addition and removal
 // of outputs, closeReq completely closes the
 // Demux and terminates the gouroutin itself.
-func (q *Demux) Start() {
+func (q *Demux[T]) Start() {
 	q.commands = make(chan any)
 	if q.Input == nil {
-		q.Input = make(chan any)
+		q.Input = make(chan T)
 	}
 
 	go func() {
@@ -136,7 +136,7 @@ func (q *Demux) Start() {
 // Close stops the gouroutine started
 // by Start method. Also close
 // any listener currently registered
-func (q Demux) Close() {
+func (q Demux[_]) Close() {
 	close(q.Input)
 }
 
