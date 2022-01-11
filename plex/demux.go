@@ -78,13 +78,10 @@ func (q Demux[_]) RemoveOut(l any) {
 // channel and distribute them to every
 // registered output.
 //
-// The gouroutine also listen for
-// 3 unexported types in the input data that
-// instruct it to do specific actions. These 3
-// types are addOut, removeOut and closeReq.
-// The first two types cause the addition and removal
-// of outputs, closeReq completely closes the
-// Demux and terminates the gouroutin itself.
+// The gouroutine also read from internal command
+// chan and execute either an addOut or removeOut command.
+// The commands causes the addition and removal
+// of outputs.
 func (q *Demux[T]) Start() {
 	q.commands = make(chan any)
 	if q.Input == nil {
@@ -95,6 +92,9 @@ func (q *Demux[T]) Start() {
 		var outputs []output
 
 		defer func() {
+			// when the gouroutine terminates,
+			// the commands chan and all output
+			// chan are closed
 			close(q.commands)
 			for _, out := range outputs {
 				out.Close()
@@ -116,8 +116,10 @@ func (q *Demux[T]) Start() {
 			case cmd := <-q.commands:
 				switch cmd := cmd.(type) {
 				case addOut:
+					// register a new output channel
 					outputs = append(outputs, cmd.out)
 				case removeOut:
+					// remove a registered channel
 					for i, out := range outputs {
 						if out.Equal(cmd.out) {
 							outputs = append(outputs[0:i], outputs[i+1:]...)
