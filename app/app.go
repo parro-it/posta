@@ -30,3 +30,12 @@ func (a App) Start() {
 	a.Actions.Input <- AppStarted{}
 
 }
+
+func PostAction(a any) {
+	Instance.Actions.Input <- a
+}
+
+func ListenAction[T any]() chan T {
+	return plex.AddOut[T](Instance.Actions)
+
+}

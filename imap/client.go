@@ -6,7 +6,6 @@ import (
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/config"
-	"github.com/parro-it/posta/plex"
 )
 
 type clientEntry struct {
@@ -23,8 +22,8 @@ func Client(ctx context.Context) chan error {
 	res := make(chan error)
 	go func() {
 		defer close(res)
-		aa := plex.AddOut[QueryClient](app.Instance.Actions)
-		<-plex.AddOut[app.AppStarted](app.Instance.Actions)
+		aa := app.ListenAction[QueryClient]()
+		<-app.ListenAction[app.AppStarted]()
 
 		clientsConfig := map[string]clientEntry{}
 

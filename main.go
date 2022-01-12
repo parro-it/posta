@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/parro-it/posta/actions"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
 	"github.com/parro-it/posta/login"
@@ -34,7 +33,7 @@ func mainWindow() *gtk.Window {
 }
 
 func main() {
-	go actions.Start()
+	app.Instance.Actions.Start()
 
 	go func() {
 		errs := folders.Start(context.Background())

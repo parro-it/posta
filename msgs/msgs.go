@@ -12,7 +12,6 @@ import (
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
 	"github.com/parro-it/posta/login"
-	"github.com/parro-it/posta/plex"
 )
 
 type Msg struct {
@@ -32,7 +31,7 @@ func Start(ctx context.Context) chan error {
 	var clientsMap = map[string]*client.Client{}
 
 	go func() {
-		clients := plex.AddOut[login.ClientReady](app.Instance.Actions)
+		clients := app.ListenAction[login.ClientReady]()
 		for cr := range clients {
 			clientsSync.Lock()
 			clientsMap[cr.Account] = cr.C
@@ -42,7 +41,7 @@ func Start(ctx context.Context) chan error {
 
 	go func() {
 		defer close(res)
-		selectedFolders := plex.AddOut[folders.Select](app.Instance.Actions)
+		selectedFolders := app.ListenAction[folders.Select]()
 
 		for fold := range selectedFolders {
 			clientsSync.Lock()
@@ -88,12 +87,12 @@ func Start(ctx context.Context) chan error {
 				log.Println("From:", header.Get("From"))
 				log.Println("To:", header.Get("To"))
 				log.Println("Subject:", header.Get("Subject"))
-				app.Instance.Actions.Input <- AddMsg{Msg: Msg{
+				app.PostAction(AddMsg{Msg: Msg{
 					Date:    header.Get("Date"),
 					From:    header.Get("From"),
 					To:      header.Get("To"),
 					Subject: header.Get("Subject"),
-				}}
+				}})
 			}
 			if err := <-done; err != nil {
 				log.Fatal(err)

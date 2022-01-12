@@ -9,7 +9,6 @@ import (
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/login"
-	"github.com/parro-it/posta/plex"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -38,7 +37,7 @@ func Start(ctx context.Context) chan error {
 	errs := make(chan error)
 	go func() {
 		g, _ := errgroup.WithContext(ctx)
-		onClientReady := plex.AddOut[login.ClientReady](app.Instance.Actions)
+		onClientReady := app.ListenAction[login.ClientReady]()
 		var firstFolderLock sync.RWMutex
 		var firstFolder string
 
@@ -57,7 +56,7 @@ func Start(ctx context.Context) chan error {
 							Account: account,
 							Path:    path,
 						}
-						app.Instance.Actions.Input <- Added{Folder: f}
+						app.PostAction(Added{Folder: f})
 						firstFolderLock.RLock()
 						folder := firstFolder
 						firstFolderLock.RUnlock()
@@ -66,7 +65,7 @@ func Start(ctx context.Context) chan error {
 							firstFolderLock.Lock()
 							firstFolder = f.Name
 							firstFolderLock.Unlock()
-							app.Instance.Actions.Input <- Select{Folder: f}
+							app.PostAction(Select{Folder: f})
 						}
 					}
 				}()

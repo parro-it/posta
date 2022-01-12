@@ -6,7 +6,6 @@ import (
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/config"
-	"github.com/parro-it/posta/plex"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -19,7 +18,7 @@ func Start(ctx context.Context) chan error {
 	res := make(chan error)
 	go func() {
 		defer close(res)
-		<-plex.AddOut[app.AppStarted](app.Instance.Actions)
+		<-app.ListenAction[app.AppStarted]()
 
 		errs := make(chan error)
 		g, _ := errgroup.WithContext(ctx)
@@ -49,7 +48,7 @@ func Start(ctx context.Context) chan error {
 				if err := c.Login(a.User, a.Pass); err != nil {
 					return err
 				}
-				app.Instance.Actions.Input <- ClientReady{C: c, Account: a.Name}
+				app.PostAction(ClientReady{C: c, Account: a.Name})
 
 				return err
 			})

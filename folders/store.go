@@ -9,7 +9,6 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
-	"github.com/parro-it/posta/plex"
 )
 
 func NewStore() *gtk.TreeStore {
@@ -19,7 +18,7 @@ func NewStore() *gtk.TreeStore {
 	}
 
 	go func() {
-		ch := plex.AddOut[Added](app.Instance.Actions)
+		ch := app.ListenAction[Added]()
 		folders := map[string]*gtk.TreeIter{}
 
 		for a := range ch {

@@ -18,7 +18,7 @@ func TestClient(t *testing.T) {
 		Res:         make(chan *client.Client),
 		AccountName: "cima",
 	}
-	app.Instance.Actions.Input <- q
+	app.PostAction(q)
 	a := <-q.Res
 	assert.NoError(t, <-errs)
 	assert.NotNil(t, a)

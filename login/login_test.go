@@ -5,14 +5,13 @@ import (
 	"testing"
 
 	"github.com/parro-it/posta/app"
-	"github.com/parro-it/posta/plex"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLogin(t *testing.T) {
 	go app.Instance.Actions.Start()
 
-	onClientReady := plex.AddOut[ClientReady](app.Instance.Actions)
+	onClientReady := app.ListenAction[ClientReady]()
 
 	errs := Start(context.Background())
 	go app.Instance.Start()
