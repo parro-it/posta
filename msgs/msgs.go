@@ -5,13 +5,13 @@ import (
 	"log"
 	"net/mail"
 	"strings"
-	"sync"
+
+	imapProc "github.com/parro-it/posta/imap"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
-	"github.com/parro-it/posta/login"
 )
 
 type Msg struct {
@@ -27,26 +27,20 @@ type AddMsg struct {
 
 func Start(ctx context.Context) chan error {
 	res := make(chan error)
-	var clientsSync sync.Mutex
-	var clientsMap = map[string]*client.Client{}
-	clients := app.ListenAction[login.ClientReady]()
 	selectedFolders := app.ListenAction[folders.Select]()
-
-	go func() {
-		for cr := range clients {
-			clientsSync.Lock()
-			clientsMap[cr.Account] = cr.C
-			clientsSync.Unlock()
-		}
-	}()
 
 	go func() {
 		defer close(res)
 
 		for fold := range selectedFolders {
-			clientsSync.Lock()
-			c := clientsMap[fold.Folder.Account]
-			clientsSync.Unlock()
+
+			qc := imapProc.QueryClient{
+				Res:         make(chan *client.Client),
+				AccountName: fold.Folder.Account,
+			}
+			app.PostAction(qc)
+			c := <-qc.Res
+
 			mbox, err := c.Select(strings.Join(fold.Folder.Path, "/"), false)
 			if err != nil {
 				log.Fatal(err)

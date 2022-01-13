@@ -7,7 +7,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
-	"github.com/parro-it/posta/login"
+	"github.com/parro-it/posta/imap"
 	"github.com/parro-it/posta/msgs"
 )
 
@@ -69,7 +69,7 @@ func main() {
 
 	app.Instance.Start(context.Background(),
 		folders.Start,
-		login.Start,
+		imap.Client,
 		msgs.Start,
 	)
 

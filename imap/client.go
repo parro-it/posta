@@ -13,6 +13,11 @@ type clientEntry struct {
 	Client  *client.Client
 }
 
+type ClientReady struct {
+	C       *client.Client
+	Account string
+}
+
 // ClientManager is a component that
 // manage connection and login to imap
 // accounts. It also respond to a query
@@ -63,6 +68,11 @@ func Client(ctx context.Context) chan error {
 						return
 					}
 				}
+				if err := ce.Client.Login(ce.Account.User, ce.Account.Pass); err != nil {
+					res <- err
+					return
+				}
+				//app.PostAction(ClientReady{C: ce.Client, Account: ce.Account.Name})
 
 			}
 

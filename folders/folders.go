@@ -8,7 +8,8 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
-	"github.com/parro-it/posta/login"
+	"github.com/parro-it/posta/config"
+	imapProc "github.com/parro-it/posta/imap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -35,18 +36,24 @@ var clients []*client.Client
 func Start(ctx context.Context) chan error {
 
 	errs := make(chan error)
-	onClientReady := app.ListenAction[login.ClientReady]()
+	appStarted := app.ListenAction[app.AppStarted]()
 
 	go func() {
 		g, _ := errgroup.WithContext(ctx)
 		var firstFolderLock sync.RWMutex
 		var firstFolder string
+		<-appStarted
 
-		for clientReady := range onClientReady {
-			account := clientReady.Account
-			c := clientReady.C
+		for _, account := range config.Values.Accounts {
+			account := account
 
 			g.Go(func() (err error) {
+				qc := imapProc.QueryClient{
+					Res:         make(chan *client.Client),
+					AccountName: account.Name,
+				}
+				app.PostAction(qc)
+				c := <-qc.Res
 
 				ch := make(chan *imap.MailboxInfo)
 				go func() {
@@ -54,7 +61,7 @@ func Start(ctx context.Context) chan error {
 						path := strings.Split(f.Name, f.Delimiter)
 						f := Folder{
 							Name:    path[len(path)-1],
-							Account: account,
+							Account: account.Name,
 							Path:    path,
 						}
 						app.PostAction(Added{Folder: f})
