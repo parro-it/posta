@@ -1,13 +1,6 @@
 package msgs
 
-import (
-	"context"
-	"testing"
-
-	"github.com/parro-it/posta/app"
-	"github.com/stretchr/testify/assert"
-)
-
+/*
 func TestStart(t *testing.T) {
 	go app.Instance.Actions.Start()
 
@@ -19,3 +12,4 @@ func TestStart(t *testing.T) {
 	err := <-errs
 	assert.NoError(t, err)
 }
+*/

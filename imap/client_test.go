@@ -10,9 +10,8 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	go app.Instance.Actions.Start()
-	errs := Client(context.Background())
-	go app.Instance.Start()
+
+	go app.Instance.Start(context.Background(), Client)
 
 	q := QueryClient{
 		Res:         make(chan *client.Client),
@@ -20,6 +19,6 @@ func TestClient(t *testing.T) {
 	}
 	app.PostAction(q)
 	a := <-q.Res
-	assert.NoError(t, <-errs)
+	//assert.NoError(t, <-errs)
 	assert.NotNil(t, a)
 }

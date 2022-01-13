@@ -20,10 +20,12 @@ type clientEntry struct {
 // name.
 func Client(ctx context.Context) chan error {
 	res := make(chan error)
+	aa := app.ListenAction[QueryClient]()
+	appStarted := app.ListenAction[app.AppStarted]()
+
 	go func() {
 		defer close(res)
-		aa := app.ListenAction[QueryClient]()
-		<-app.ListenAction[app.AppStarted]()
+		<-appStarted
 
 		clientsConfig := map[string]clientEntry{}
 

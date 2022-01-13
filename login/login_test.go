@@ -9,12 +9,9 @@ import (
 )
 
 func TestLogin(t *testing.T) {
-	go app.Instance.Actions.Start()
 
+	app.Instance.Start(context.Background(), Start)
 	onClientReady := app.ListenAction[ClientReady]()
-
-	errs := Start(context.Background())
-	go app.Instance.Start()
 
 	c1 := <-onClientReady
 	c2 := <-onClientReady
@@ -23,6 +20,6 @@ func TestLogin(t *testing.T) {
 	assert.NotNil(t, c2)
 	assert.NotEqual(t, c1, c2)
 
-	err := <-errs
-	assert.NoError(t, err)
+	//err := <-errs
+	//assert.NoError(t, err)
 }

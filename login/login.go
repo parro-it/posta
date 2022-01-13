@@ -16,9 +16,10 @@ type ClientReady struct {
 
 func Start(ctx context.Context) chan error {
 	res := make(chan error)
+	appStarted := app.ListenAction[app.AppStarted]()
 	go func() {
 		defer close(res)
-		<-app.ListenAction[app.AppStarted]()
+		<-appStarted
 
 		errs := make(chan error)
 		g, _ := errgroup.WithContext(ctx)

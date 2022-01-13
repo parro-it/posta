@@ -35,9 +35,10 @@ var clients []*client.Client
 func Start(ctx context.Context) chan error {
 
 	errs := make(chan error)
+	onClientReady := app.ListenAction[login.ClientReady]()
+
 	go func() {
 		g, _ := errgroup.WithContext(ctx)
-		onClientReady := app.ListenAction[login.ClientReady]()
 		var firstFolderLock sync.RWMutex
 		var firstFolder string
 

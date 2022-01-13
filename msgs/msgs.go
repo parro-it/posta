@@ -29,9 +29,10 @@ func Start(ctx context.Context) chan error {
 	res := make(chan error)
 	var clientsSync sync.Mutex
 	var clientsMap = map[string]*client.Client{}
+	clients := app.ListenAction[login.ClientReady]()
+	selectedFolders := app.ListenAction[folders.Select]()
 
 	go func() {
-		clients := app.ListenAction[login.ClientReady]()
 		for cr := range clients {
 			clientsSync.Lock()
 			clientsMap[cr.Account] = cr.C
@@ -41,7 +42,6 @@ func Start(ctx context.Context) chan error {
 
 	go func() {
 		defer close(res)
-		selectedFolders := app.ListenAction[folders.Select]()
 
 		for fold := range selectedFolders {
 			clientsSync.Lock()

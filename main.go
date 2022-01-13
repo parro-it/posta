@@ -33,40 +33,46 @@ func mainWindow() *gtk.Window {
 }
 
 func main() {
-	app.Instance.Actions.Start()
+	/*
+		app.Instance.Actions.Start()
 
-	go func() {
-		errs := folders.Start(context.Background())
+		go func() {
+			errs := folders.Start(context.Background())
+			errs2 := login.Start(context.Background())
+			errs3 := msgs.Start(context.Background())
 
-		errs2 := login.Start(context.Background())
-		errs3 := msgs.Start(context.Background())
+			for {
+				select {
+				case e := <-errs:
+					if e != nil {
+						panic(e)
+					}
+				case e := <-errs2:
+					if e != nil {
+						panic(e)
+					}
 
-		for {
-			select {
-			case e := <-errs:
-				if e != nil {
-					panic(e)
-				}
-			case e := <-errs2:
-				if e != nil {
-					panic(e)
-				}
-
-			case e := <-errs3:
-				if e != nil {
-					panic(e)
+				case e := <-errs3:
+					if e != nil {
+						panic(e)
+					}
 				}
 			}
-		}
-		/*
-			err = <-folders.ListenUpdates(context.Background())
-			if err != nil {
-				log.Fatal(err)
-			}
-		*/
-	}()
+			/*
+				err = <-folders.ListenUpdates(context.Background())
+				if err != nil {
+					log.Fatal(err)
+				}
+			* /
+		}()
+	*/
 
-	go app.Instance.Start()
+	app.Instance.Start(context.Background(),
+		folders.Start,
+		login.Start,
+		msgs.Start,
+	)
+
 	gtk.Init(nil)
 
 	win := mainWindow()

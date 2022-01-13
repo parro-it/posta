@@ -13,9 +13,9 @@ func NewStore() *gtk.TreeStore {
 	if err != nil {
 		log.Fatal("Unable to create tree store:", err)
 	}
+	ch := app.ListenAction[AddMsg]()
 
 	go func() {
-		ch := app.ListenAction[AddMsg]()
 
 		//folders := map[string]*gtk.TreeIter{}
 
