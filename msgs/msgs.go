@@ -3,6 +3,7 @@ package msgs
 import (
 	"context"
 	"log"
+	"mime"
 	"net/mail"
 	"strings"
 
@@ -51,20 +52,21 @@ func Start(ctx context.Context) chan error {
 				log.Fatal("No message in mailbox")
 			}
 			seqset := new(imap.SeqSet)
-			seqset.AddRange(mbox.Messages-10, mbox.Messages)
+			seqset.AddRange(1, mbox.Messages)
 
 			var section imap.BodySectionName
 			section.Specifier = imap.HeaderSpecifier
 			// Get the whole message body
 			items := []imap.FetchItem{section.FetchItem()}
 
-			messages := make(chan *imap.Message, 1)
+			messages := make(chan *imap.Message)
 			done := make(chan error, 1)
 			go func() {
 				done <- c.Fetch(seqset, items, messages)
 			}()
+			log.Println("start")
 
-			log.Println("Last message:")
+			//log.Println("Last message:")
 			for msg := range messages {
 				r := msg.GetBody(&section)
 				if r == nil {
@@ -77,20 +79,48 @@ func Start(ctx context.Context) chan error {
 				}
 
 				header := m.Header
-				log.Println("Date:", header.Get("Date"))
-				log.Println("From:", header.Get("From"))
-				log.Println("To:", header.Get("To"))
-				log.Println("Subject:", header.Get("Subject"))
+				d, err := header.Date()
+				if err != nil {
+					panic(err)
+				}
+				from, err := header.AddressList("From")
+				if err != nil {
+					panic(err)
+				}
+				/*tos, err := header.AddressList("To")
+				if err != nil {
+					continue
+				}
+				to := strings.Builder{}
+				for i, t := range tos {
+					if i > 0 {
+						to.WriteString(", ")
+					}
+					to.WriteString(t.Name)
+				}
+				*/
+
+				dec := new(mime.WordDecoder)
+				subject, err := dec.DecodeHeader(header.Get("Subject"))
+				if err != nil {
+					subject = err.Error() + " " + header.Get("Subject")
+				}
+
 				app.PostAction(AddMsg{Msg: Msg{
-					Date:    header.Get("Date"),
-					From:    header.Get("From"),
-					To:      header.Get("To"),
-					Subject: header.Get("Subject"),
+					Date: d.Format("2006/01/02 15:04"),
+					From: from[0].Name,
+					//To:      to.String(),
+					Subject: subject,
 				}})
+				//log.Println("Date:", header.Get("Date"))
+				//log.Println("From:", header.Get("From"))
+				//log.Println("To:", header.Get("To"))
+				//log.Println("Subject:", header.Get("Subject"))
 			}
 			if err := <-done; err != nil {
 				log.Fatal(err)
 			}
+			log.Println("done")
 			/*
 				body, err := ioutil.ReadAll(m.Body)
 				if err != nil {

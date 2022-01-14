@@ -29,62 +29,31 @@ func mainWindow() *gtk.Window {
 	})
 	win.SetPosition(gtk.WIN_POS_CENTER)
 	win.SetDefaultSize(800, 600)
+
+	horzCnt, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	horzCnt.Pack1(folders.View(), true, true)
+	horzCnt.Pack2(msgs.View(), true, true)
+	horzCnt.SetPosition(250)
+	win.Add(horzCnt)
+
 	return win
 }
 
 func main() {
-	/*
-		app.Instance.Actions.Start()
-
-		go func() {
-			errs := folders.Start(context.Background())
-			errs2 := login.Start(context.Background())
-			errs3 := msgs.Start(context.Background())
-
-			for {
-				select {
-				case e := <-errs:
-					if e != nil {
-						panic(e)
-					}
-				case e := <-errs2:
-					if e != nil {
-						panic(e)
-					}
-
-				case e := <-errs3:
-					if e != nil {
-						panic(e)
-					}
-				}
-			}
-			/*
-				err = <-folders.ListenUpdates(context.Background())
-				if err != nil {
-					log.Fatal(err)
-				}
-			* /
-		}()
-	*/
 
 	app.Instance.Start(context.Background(),
 		folders.Start,
-		imap.Client,
+		imap.Start,
 		msgs.Start,
 	)
 
 	gtk.Init(nil)
 
 	win := mainWindow()
-	horzCnt, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	horzCnt.PackStart(folders.View(), true, true, 0)
-	horzCnt.PackStart(msgs.View(), true, true, 0)
-
-	win.Add(horzCnt)
 
 	/*
 		selection, err := treeView.GetSelection()

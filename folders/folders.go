@@ -3,7 +3,6 @@ package folders
 import (
 	"context"
 	"strings"
-	"sync"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
@@ -40,49 +39,45 @@ func Start(ctx context.Context) chan error {
 
 	go func() {
 		g, _ := errgroup.WithContext(ctx)
-		var firstFolderLock sync.RWMutex
-		var firstFolder string
 		<-appStarted
 
-		for _, account := range config.Values.Accounts {
-			account := account
+		for i, account := range config.Values.Accounts {
+			if i == 0 {
+				g.Go(listClientFolder(account, true))
 
-			g.Go(func() (err error) {
-				qc := imapProc.QueryClient{
-					Res:         make(chan *client.Client),
-					AccountName: account.Name,
-				}
-				app.PostAction(qc)
-				c := <-qc.Res
+			} else {
+				g.Go(listClientFolder(account, false))
 
-				ch := make(chan *imap.MailboxInfo)
-				go func() {
-					for f := range ch {
-						path := strings.Split(f.Name, f.Delimiter)
-						f := Folder{
-							Name:    path[len(path)-1],
-							Account: account.Name,
-							Path:    path,
-						}
-						app.PostAction(Added{Folder: f})
-						firstFolderLock.RLock()
-						folder := firstFolder
-						firstFolderLock.RUnlock()
+			}
 
-						if folder == "" {
-							firstFolderLock.Lock()
-							firstFolder = f.Name
-							firstFolderLock.Unlock()
-							app.PostAction(Select{Folder: f})
-						}
-					}
-				}()
-				err = c.List("", "*", ch)
-				return err
-			})
 		}
 	}()
 	return errs
+}
+
+func listClientFolder(account config.Account, selFirstFolder bool) func() error {
+	return func() (err error) {
+		lf := imapProc.ListFolder{
+			Res:         make(chan *imap.MailboxInfo),
+			AccountName: account.Name,
+		}
+		app.PostAction(lf)
+		for f := range lf.Res {
+			path := strings.Split(f.Name, f.Delimiter)
+			f := Folder{
+				Name:    path[len(path)-1],
+				Account: account.Name,
+				Path:    path,
+			}
+			app.PostAction(Added{Folder: f})
+
+			if selFirstFolder && f.Name == "INBOX" {
+				app.PostAction(Select{Folder: f})
+				selFirstFolder = false
+			}
+		}
+		return err
+	}
 }
 
 /*

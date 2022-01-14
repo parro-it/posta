@@ -85,7 +85,7 @@ func (q Demux[_]) RemoveOut(l any) {
 func (q *Demux[T]) Start() {
 	q.commands = make(chan any)
 	if q.Input == nil {
-		q.Input = make(chan T)
+		q.Input = make(chan T, 1024)
 	}
 
 	go func() {
@@ -109,11 +109,14 @@ func (q *Demux[T]) Start() {
 					// Input chan is closed
 					return
 				}
+				//fmt.Printf("%s %v\n", reflect.TypeOf(data).Name(), data)
+
 				// forward the item to every reader
 				for _, r := range outputs {
 					r.Post(data)
 				}
 			case cmd := <-q.commands:
+				//fmt.Printf("%s\n", cmd)
 				switch cmd := cmd.(type) {
 				case addOut:
 					// register a new output channel

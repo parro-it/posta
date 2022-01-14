@@ -46,7 +46,7 @@ func createImageColumn(title string, id int) *gtk.TreeViewColumn {
 const (
 	COLUMN_DATE = iota
 	COLUMN_FROM
-	COLUMN_TO
+	//COLUMN_TO
 	COLUMN_SUBJECT
 )
 
@@ -58,7 +58,7 @@ func View() *gtk.ScrolledWindow {
 	}
 	tree.AppendColumn(createTextColumn("Date", COLUMN_DATE))
 	tree.AppendColumn(createTextColumn("From", COLUMN_FROM))
-	tree.AppendColumn(createTextColumn("To", COLUMN_TO))
+	//tree.AppendColumn(createTextColumn("To", COLUMN_TO))
 	tree.AppendColumn(createTextColumn("Subject", COLUMN_SUBJECT))
 
 	// Creating a tree store. This is what holds the data that will be shown on our tree view.

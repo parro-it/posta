@@ -63,5 +63,7 @@ func PostAction(a any) {
 
 func ListenAction[T any]() chan T {
 	return plex.AddOut[T](Instance.Actions)
-
+}
+func ListenAction2[T1 any, T2 any]() chan any {
+	return plex.AddOut2[T1, T2](Instance.Actions)
 }

@@ -11,7 +11,7 @@ import (
 
 func TestClient(t *testing.T) {
 
-	app.Instance.Start(context.Background(), Client)
+	app.Instance.Start(context.Background(), Start)
 
 	q := QueryClient{
 		Res:         make(chan *client.Client),

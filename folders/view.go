@@ -50,8 +50,8 @@ func View() *gtk.ScrolledWindow {
 		log.Fatal("Unable to create tree view:", err)
 	}
 
-	tree.AppendColumn(createImageColumn("Icon", COLUMN_ICON))
-	tree.AppendColumn(createTextColumn("Version", COLUMN_TEXT))
+	tree.AppendColumn(createImageColumn(" ", COLUMN_ICON))
+	tree.AppendColumn(createTextColumn(" ", COLUMN_TEXT))
 
 	// Creating a tree store. This is what holds the data that will be shown on our tree view.
 	store := NewStore()

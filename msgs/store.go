@@ -9,7 +9,7 @@ import (
 )
 
 func NewStore() *gtk.TreeStore {
-	store, err := gtk.TreeStoreNew(glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING)
+	store, err := gtk.TreeStoreNew(glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING)
 	if err != nil {
 		log.Fatal("Unable to create tree store:", err)
 	}
@@ -48,10 +48,10 @@ func handleActions(a any, store *gtk.TreeStore) {
 		if err := store.SetValue(msg, COLUMN_FROM, m.From); err != nil {
 			log.Fatal("Unable set value:", err)
 		}
-
-		if err := store.SetValue(msg, COLUMN_TO, m.To); err != nil {
-			log.Fatal("Unable set value:", err)
-		}
-
+		/*
+			if err := store.SetValue(msg, COLUMN_TO, m.To); err != nil {
+				log.Fatal("Unable set value:", err)
+			}
+		*/
 	}
 }
