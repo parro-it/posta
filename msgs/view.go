@@ -21,7 +21,8 @@ func createTextColumn(title string, id int) *gtk.TreeViewColumn {
 	if err != nil {
 		log.Fatal("Unable to create cell column:", err)
 	}
-
+	column.SetResizable(true)
+	column.SetReorderable(true)
 	return column
 }
 

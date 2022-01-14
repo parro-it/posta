@@ -38,6 +38,7 @@ func mainWindow() *gtk.Window {
 	horzCnt.Pack1(folders.View(), true, true)
 	horzCnt.Pack2(msgs.View(), true, true)
 	horzCnt.SetPosition(250)
+	horzCnt.SetWideHandle(true)
 	win.Add(horzCnt)
 
 	return win
