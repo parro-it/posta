@@ -11,16 +11,18 @@ import (
 	"github.com/parro-it/posta/app"
 )
 
+var folders = map[string]*gtk.TreeIter{}
+var foldersObj = map[string]*Folder{}
+
 func NewStore() *gtk.TreeStore {
-	store, err := gtk.TreeStoreNew(glib.TYPE_OBJECT, glib.TYPE_STRING)
+	store, err := gtk.TreeStoreNew(glib.TYPE_OBJECT, glib.TYPE_STRING, glib.TYPE_STRING)
 	if err != nil {
 		log.Fatal("Unable to create tree store:", err)
 	}
 	ch := app.ListenAction[Added]()
 
 	go func() {
-		folders := map[string]*gtk.TreeIter{}
-
+		store.SetProperty("map", folders)
 		for a := range ch {
 			a := a
 			glib.IdleAdd(func() bool {
@@ -43,6 +45,7 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 		if account, ok = folders[a.Folder.Account]; !ok {
 			account = store.Append(nil)
 			folders[a.Folder.Account] = account
+
 			err := store.SetValue(account, COLUMN_ICON, imageFolder)
 			if err != nil {
 				log.Fatal("Unable set value:", err)
@@ -51,6 +54,7 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 			if err != nil {
 				log.Fatal("Unable set value:", err)
 			}
+
 		}
 
 		if len(a.Folder.Path) > 1 {
@@ -65,6 +69,8 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 
 		i := store.Append(parent)
 		folders[strings.Join(a.Folder.Path, "/")] = i
+		foldersObj[strings.Join(a.Folder.Path, "/")] = &a.Folder
+
 		// Set the contents of the tree store row that the iterator represents
 		err := store.SetValue(i, COLUMN_ICON, imageFolder)
 		if err != nil {
@@ -72,6 +78,11 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 		}
 		fmt.Printf("set folder in store %s\n", a.Folder.Name)
 		err = store.SetValue(i, COLUMN_TEXT, a.Folder.Name)
+		if err != nil {
+			log.Fatal("Unable set value:", err)
+		}
+
+		err = store.SetValue(i, COLUMN_OBJ, strings.Join(a.Folder.Path, "/"))
 		if err != nil {
 			log.Fatal("Unable set value:", err)
 		}
@@ -99,4 +110,5 @@ func init() {
 const (
 	COLUMN_ICON = iota
 	COLUMN_TEXT
+	COLUMN_OBJ
 )

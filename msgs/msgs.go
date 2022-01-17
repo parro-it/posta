@@ -26,6 +26,9 @@ type AddMsg struct {
 	Msg Msg
 }
 
+type ClearMsgs struct {
+}
+
 func Start(ctx context.Context) chan error {
 	res := make(chan error)
 	selectedFolders := app.ListenAction[folders.Select]()
@@ -34,7 +37,7 @@ func Start(ctx context.Context) chan error {
 		defer close(res)
 
 		for fold := range selectedFolders {
-
+			app.PostAction(ClearMsgs{})
 			qc := imapProc.QueryClient{
 				Res:         make(chan *client.Client),
 				AccountName: fold.Folder.Account,
@@ -49,7 +52,7 @@ func Start(ctx context.Context) chan error {
 
 			// Get the last message
 			if mbox.Messages == 0 {
-				log.Fatal("No message in mailbox")
+				continue
 			}
 			seqset := new(imap.SeqSet)
 			seqset.AddRange(1, mbox.Messages)

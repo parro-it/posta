@@ -16,6 +16,7 @@ type Folder struct {
 	Name    string
 	Account string
 	Path    []string
+	//Imap    *imap.MailboxInfo
 }
 
 type Select struct {
@@ -63,11 +64,13 @@ func listClientFolder(account config.Account, selFirstFolder bool) func() error 
 		}
 		app.PostAction(lf)
 		for f := range lf.Res {
+
 			path := strings.Split(f.Name, f.Delimiter)
 			f := Folder{
 				Name:    path[len(path)-1],
 				Account: account.Name,
 				Path:    path,
+				//Imap:    f,
 			}
 			app.PostAction(Added{Folder: f})
 

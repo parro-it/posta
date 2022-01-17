@@ -13,7 +13,7 @@ func NewStore() *gtk.TreeStore {
 	if err != nil {
 		log.Fatal("Unable to create tree store:", err)
 	}
-	ch := app.ListenAction[AddMsg]()
+	ch := app.ListenAction2[AddMsg, ClearMsgs]()
 
 	go func() {
 
@@ -33,6 +33,8 @@ func NewStore() *gtk.TreeStore {
 
 func handleActions(a any, store *gtk.TreeStore) {
 	switch a := a.(type) {
+	case ClearMsgs:
+		store.Clear()
 	case AddMsg:
 		m := a.Msg
 		msg := store.Append(nil)

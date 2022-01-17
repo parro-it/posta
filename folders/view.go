@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/parro-it/posta/app"
 )
 
 // Add a column to the tree view (during the initialization of the tree view)
@@ -53,6 +54,10 @@ func View() *gtk.ScrolledWindow {
 	tree.AppendColumn(createImageColumn(" ", COLUMN_ICON))
 	tree.AppendColumn(createTextColumn(" ", COLUMN_TEXT))
 
+	sel, _ := tree.GetSelection()
+	sel.SetMode(gtk.SELECTION_SINGLE)
+	sel.Connect("changed", treeSelectionChangedCB)
+
 	// Creating a tree store. This is what holds the data that will be shown on our tree view.
 	store := NewStore()
 	tree.SetModel(store)
@@ -65,20 +70,28 @@ func View() *gtk.ScrolledWindow {
 	return scroll
 }
 
-/*
 // Handle selection
 func treeSelectionChangedCB(selection *gtk.TreeSelection) {
 	var iter *gtk.TreeIter
 	var model gtk.ITreeModel
 	var ok bool
 	model, iter, ok = selection.GetSelected()
+
 	if ok {
-		tpath, err := model.(*gtk.TreeModel).GetPath(iter)
+		v, err := model.ToTreeModel().GetValue(iter, COLUMN_OBJ)
 		if err != nil {
 			log.Printf("treeSelectionChangedCB: Could not get path from model: %s\n", err)
 			return
 		}
-		log.Printf("treeSelectionChangedCB: selected path: %s\n", tpath)
+		s, err := v.GetString()
+		if err != nil {
+			log.Printf("treeSelectionChangedCB: Could not get path from model: %s\n", err)
+			return
+		}
+		f, ok := foldersObj[s]
+		if ok {
+			app.PostAction(Select{Folder: *f})
+		}
+
 	}
 }
-*/
