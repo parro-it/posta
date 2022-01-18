@@ -2,6 +2,7 @@ package folders
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/emersion/go-imap"
@@ -62,12 +63,24 @@ func listClientFolder(account config.Account, selFirstFolder bool) func() error 
 			Res:         make(chan *imap.MailboxInfo),
 			AccountName: account.Name,
 		}
+
+		qc := imapProc.QueryClient{
+			Res:         make(chan *client.Client),
+			AccountName: account.Name,
+		}
+		app.PostAction(qc)
+		c := <-qc.Res
+
 		app.PostAction(lf)
 		for f := range lf.Res {
-
+			var size uint32
+			mbox, err := c.Select(f.Name, false)
+			if err == nil {
+				size = mbox.Messages
+			}
 			path := strings.Split(f.Name, f.Delimiter)
 			f := Folder{
-				Name:    path[len(path)-1],
+				Name:    fmt.Sprintf("%s (%d)", path[len(path)-1], size),
 				Account: account.Name,
 				Path:    path,
 				//Imap:    f,

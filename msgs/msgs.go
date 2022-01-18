@@ -12,6 +12,7 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
+	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/folders"
 )
 
@@ -36,7 +37,7 @@ func Start(ctx context.Context) chan error {
 	go func() {
 		defer close(res)
 
-		for fold := range selectedFolders {
+		for fold := range chans.WithContext(ctx, selectedFolders) {
 			app.PostAction(ClearMsgs{})
 			qc := imapProc.QueryClient{
 				Res:         make(chan *client.Client),
