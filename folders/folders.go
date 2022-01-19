@@ -6,7 +6,7 @@ import (
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/config"
-	imapProc "github.com/parro-it/posta/imap"
+	"github.com/parro-it/posta/imap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -19,15 +19,15 @@ type Folder struct {
 }
 */
 type Select struct {
-	Folder imapProc.Folder
+	Folder imap.Folder
 }
 
 type Added struct {
-	Folder imapProc.Folder
+	Folder imap.Folder
 }
 
 type Removed struct {
-	Folder imapProc.Folder
+	Folder imap.Folder
 }
 
 var clients []*client.Client
@@ -55,7 +55,7 @@ func Start(ctx context.Context) chan error {
 func listClientFolder(account config.Account, selFirstFolder bool) func() error {
 	return func() (err error) {
 
-		c, err := imapProc.AccountByName(account.Name)
+		c, err := imap.AccountByName(account.Name)
 		if err != nil {
 			panic(err)
 		}

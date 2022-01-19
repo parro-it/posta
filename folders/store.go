@@ -9,11 +9,11 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
-	imapProc "github.com/parro-it/posta/imap"
+	"github.com/parro-it/posta/imap"
 )
 
 var folders = map[string]*gtk.TreeIter{}
-var foldersObj = map[string]*imapProc.Folder{}
+var foldersObj = map[string]*imap.Folder{}
 
 func NewStore() *gtk.TreeStore {
 	store, err := gtk.TreeStoreNew(glib.TYPE_OBJECT, glib.TYPE_STRING, glib.TYPE_STRING)

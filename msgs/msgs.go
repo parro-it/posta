@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	imapProc "github.com/parro-it/posta/imap"
+	"github.com/parro-it/posta/imap"
 
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/chans"
@@ -12,7 +12,7 @@ import (
 )
 
 type AddMsg struct {
-	Msg imapProc.Msg
+	Msg imap.Msg
 }
 
 type ClearMsgs struct {
@@ -27,14 +27,14 @@ func Start(ctx context.Context) chan error {
 
 		for fold := range chans.WithContext(ctx, selectedFolders) {
 			app.PostAction(ClearMsgs{})
-			c, err := imapProc.AccountByName(fold.Folder.Account)
+			c, err := imap.AccountByName(fold.Folder.Account)
 
 			if err != nil {
 				log.Printf("Cannot retrieve imap client: %s", err.Error())
 				continue
 			}
 
-			msgs := c.ListMessages(imapProc.Folder{Path: fold.Folder.Path, Account: fold.Folder.Account})
+			msgs := c.ListMessages(imap.Folder{Path: fold.Folder.Path, Account: fold.Folder.Account})
 			for msg := range msgs.Res {
 				app.PostAction(AddMsg{Msg: msg})
 			}
