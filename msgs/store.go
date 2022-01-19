@@ -43,7 +43,7 @@ func handleActions(a any, store *gtk.TreeStore) {
 			log.Fatal("Unable set value:", err)
 		}
 
-		if err := store.SetValue(msg, COLUMN_DATE, m.Date); err != nil {
+		if err := store.SetValue(msg, COLUMN_DATE, m.Date.Format("2006-01-02 15:04")); err != nil {
 			log.Fatal("Unable set value:", err)
 		}
 

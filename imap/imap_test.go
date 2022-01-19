@@ -40,11 +40,11 @@ func TestListFolders(t *testing.T) {
 		arr[i].mbInfo = nil
 	}
 	assert.Equal(t, []Folder{
-		{Size: 0x0, Name: "Sent", Account: "test mailbox", Path: []string{"Sent"}},
-		{Size: 0x0, Name: "Trash", Account: "test mailbox", Path: []string{"Trash"}},
-		{Size: 0x0, Name: "Junk", Account: "test mailbox", Path: []string{"Junk"}},
-		{Size: 0x0, Name: "Drafts", Account: "test mailbox", Path: []string{"Drafts"}},
-		{Size: 0x2, Name: "INBOX", Account: "test mailbox", Path: []string{"INBOX"}},
+		{Size: 0x0, Name: "Sent", Account: "test mailbox", Path: "Sent"},
+		{Size: 0x0, Name: "Trash", Account: "test mailbox", Path: "Trash"},
+		{Size: 0x0, Name: "Junk", Account: "test mailbox", Path: "Junk"},
+		{Size: 0x0, Name: "Drafts", Account: "test mailbox", Path: "Drafts"},
+		{Size: 0x2, Name: "INBOX", Account: "test mailbox", Path: "INBOX"},
 	}, arr)
 
 }

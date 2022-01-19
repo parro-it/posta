@@ -5,8 +5,8 @@ package imap
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"log"
 	"mime"
 	"net/mail"
 	"strings"
@@ -19,6 +19,7 @@ import (
 	"github.com/parro-it/posta/config"
 )
 
+/*
 type clientEntry struct {
 	Account config.Account
 	Client  *client.Client
@@ -28,7 +29,7 @@ type ClientReady struct {
 	C       *client.Client
 	Account string
 }
-
+*/
 // Account encapsulates a
 // connection to an imap server
 // and the configuration to make it.
@@ -38,10 +39,11 @@ type Account struct {
 }
 
 type Folder struct {
+	Sep     string
 	Size    uint32
 	Name    string
 	Account string
-	Path    []string
+	Path    string
 	mbInfo  *imap.MailboxInfo
 }
 
@@ -52,10 +54,14 @@ type Msg struct {
 	Subject string
 }
 
-var accounts = map[string]Account{}
+var accounts = map[string]*Account{}
 
 func AccountByName(name string) (*Account, error) {
-	return nil, nil
+	a, ok := accounts[name]
+	if !ok {
+		return a, fmt.Errorf("Account not found with name %s", name)
+	}
+	return a, nil
 }
 
 type Result[T any] struct {
@@ -114,7 +120,8 @@ func (acc *Account) ListFolders() *Result[Folder] {
 			res.Res <- Folder{
 				Name:    path[len(path)-1],
 				Account: acc.Cfg.Name,
-				Path:    path,
+				Path:    mb.Name,
+				Sep:     mb.Delimiter,
 				Size:    size,
 				mbInfo:  mb,
 			}
@@ -135,7 +142,7 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 	go func() {
 		var mbox *imap.MailboxStatus
 
-		if mbox, res.Err = acc.client.Select(strings.Join(folder.Path, "/"), true); res.Err != nil {
+		if mbox, res.Err = acc.client.Select(folder.Path, true); res.Err != nil {
 			close(ch)
 			return
 		}
@@ -152,36 +159,42 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 		items := []imap.FetchItem{section.FetchItem()}
 		res.Err = acc.client.Fetch(seqset, items, ch)
 	}()
+
 	go func() {
 		defer close(res.Res)
 		for msg := range ch {
 			r := msg.GetBody(&section)
 			if r == nil {
-				res.Err = errors.New("Server didn't returned message body")
-				return
+				log.Println("Server didn't returned message body")
+				continue
 			}
 			out := Msg{}
 
 			var m *mail.Message
-			if m, res.Err = mail.ReadMessage(r); res.Err != nil {
-				return
+			var err error
+			if m, err = mail.ReadMessage(r); err != nil {
+				log.Printf("Cannot read message: %s\n", err.Error())
+				continue
 			}
 
-			if out.Date, res.Err = m.Header.Date(); res.Err != nil {
-				return
+			if out.Date, err = m.Header.Date(); err != nil {
+				log.Printf("Cannot read message date: %s\n", err.Error())
+				continue
 			}
 
 			var from []*mail.Address
 
-			if from, res.Err = m.Header.AddressList("From"); res.Err != nil {
-				return
+			if from, err = m.Header.AddressList("From"); err != nil {
+				log.Printf("Cannot read message From: %s\n", err.Error())
+				continue
 			}
 			out.From = from[0].Name
 
 			var to []*mail.Address
 
-			if to, res.Err = m.Header.AddressList("To"); res.Err != nil {
-				return
+			if to, err = m.Header.AddressList("To"); err != nil {
+				log.Printf("Cannot read message From: %s\n", err.Error())
+				continue
 			}
 			for _, a := range to {
 				out.To = append(out.To, a.Name)
@@ -190,9 +203,9 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 			dec := new(mime.WordDecoder)
 			subj := m.Header.Get("Subject")
 
-			var e error
-			if out.Subject, e = dec.DecodeHeader(subj); res.Err != nil {
-				out.Subject = e.Error() + " " + subj
+			if out.Subject, err = dec.DecodeHeader(subj); err != nil {
+				log.Printf("Cannot decode subject: %s\n", err.Error())
+				out.Subject = subj
 			}
 			res.Res <- out
 		}
@@ -200,6 +213,28 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 	return res
 }
 
+// ClientManager is a component that
+// manage connection and login to imap
+// accounts. It also respond to a query
+// action to get a connected client by
+// name.
+func Start(ctx context.Context) chan error {
+	appStarted := app.ListenAction[app.AppStarted]()
+	res := make(chan error)
+	go func() {
+		defer close(res)
+		<-appStarted
+
+		// load all configured accounts from config
+		// and map them by name
+		for _, a := range config.Values.Accounts {
+			accounts[a.Name] = &Account{a, nil}
+		}
+	}()
+	return res
+}
+
+/*
 // ClientManager is a component that
 // manage connection and login to imap
 // accounts. It also respond to a query
@@ -296,3 +331,4 @@ type ListFolder struct {
 	Res         chan *imap.MailboxInfo
 	AccountName string
 }
+*/

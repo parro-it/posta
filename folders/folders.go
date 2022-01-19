@@ -2,10 +2,7 @@ package folders
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
-	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/config"
@@ -13,23 +10,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+/*
 type Folder struct {
 	Name    string
 	Account string
 	Path    []string
 	//Imap    *imap.MailboxInfo
 }
-
+*/
 type Select struct {
-	Folder Folder
+	Folder imapProc.Folder
 }
 
 type Added struct {
-	Folder Folder
+	Folder imapProc.Folder
 }
 
 type Removed struct {
-	Folder Folder
+	Folder imapProc.Folder
 }
 
 var clients []*client.Client
@@ -44,14 +42,11 @@ func Start(ctx context.Context) chan error {
 		<-appStarted
 
 		for i, account := range config.Values.Accounts {
-			if i == 0 {
+			if i == 1 {
 				g.Go(listClientFolder(account, true))
-
 			} else {
 				g.Go(listClientFolder(account, false))
-
 			}
-
 		}
 	}()
 	return errs
@@ -59,32 +54,20 @@ func Start(ctx context.Context) chan error {
 
 func listClientFolder(account config.Account, selFirstFolder bool) func() error {
 	return func() (err error) {
-		lf := imapProc.ListFolder{
-			Res:         make(chan *imap.MailboxInfo),
-			AccountName: account.Name,
+
+		c, err := imapProc.AccountByName(account.Name)
+		if err != nil {
+			panic(err)
+		}
+		res := c.Login()
+		<-res.Res
+		if res.Err != nil {
+			panic(res.Err)
 		}
 
-		qc := imapProc.QueryClient{
-			Res:         make(chan *client.Client),
-			AccountName: account.Name,
-		}
-		app.PostAction(qc)
-		c := <-qc.Res
-
-		app.PostAction(lf)
+		lf := c.ListFolders()
 		for f := range lf.Res {
-			var size uint32
-			mbox, err := c.Select(f.Name, false)
-			if err == nil {
-				size = mbox.Messages
-			}
-			path := strings.Split(f.Name, f.Delimiter)
-			f := Folder{
-				Name:    fmt.Sprintf("%s (%d)", path[len(path)-1], size),
-				Account: account.Name,
-				Path:    path,
-				//Imap:    f,
-			}
+
 			app.PostAction(Added{Folder: f})
 
 			if selFirstFolder && f.Name == "INBOX" {

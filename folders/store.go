@@ -9,10 +9,11 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
+	imapProc "github.com/parro-it/posta/imap"
 )
 
 var folders = map[string]*gtk.TreeIter{}
-var foldersObj = map[string]*Folder{}
+var foldersObj = map[string]*imapProc.Folder{}
 
 func NewStore() *gtk.TreeStore {
 	store, err := gtk.TreeStoreNew(glib.TYPE_OBJECT, glib.TYPE_STRING, glib.TYPE_STRING)
@@ -57,9 +58,10 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 
 		}
 
-		if len(a.Folder.Path) > 1 {
-			parentPath := a.Folder.Path[0 : len(a.Folder.Path)-1]
-			if parent, ok = folders[strings.Join(parentPath, "/")]; !ok {
+		if strings.Contains(a.Folder.Path, a.Folder.Sep) {
+			path := strings.Split(a.Folder.Path, a.Folder.Sep)
+			parentPath := path[0 : len(path)-1]
+			if parent, ok = folders[strings.Join(parentPath, a.Folder.Sep)]; !ok {
 				fmt.Printf("Parent not found for %v\n", parentPath)
 				return
 			}
@@ -68,21 +70,20 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 		}
 
 		i := store.Append(parent)
-		folders[strings.Join(a.Folder.Path, "/")] = i
-		foldersObj[strings.Join(a.Folder.Path, "/")] = &a.Folder
+		folders[a.Folder.Path] = i
+		foldersObj[a.Folder.Path] = &a.Folder
 
 		// Set the contents of the tree store row that the iterator represents
 		err := store.SetValue(i, COLUMN_ICON, imageFolder)
 		if err != nil {
 			log.Fatal("Unable set value:", err)
 		}
-		fmt.Printf("set folder in store %s\n", a.Folder.Name)
 		err = store.SetValue(i, COLUMN_TEXT, a.Folder.Name)
 		if err != nil {
 			log.Fatal("Unable set value:", err)
 		}
 
-		err = store.SetValue(i, COLUMN_OBJ, strings.Join(a.Folder.Path, "/"))
+		err = store.SetValue(i, COLUMN_OBJ, a.Folder.Path)
 		if err != nil {
 			log.Fatal("Unable set value:", err)
 		}
