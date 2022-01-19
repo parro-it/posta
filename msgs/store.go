@@ -6,10 +6,11 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
+	"github.com/parro-it/posta/imap"
 )
 
 func NewStore() *gtk.TreeStore {
-	store, err := gtk.TreeStoreNew(glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING)
+	store, err := gtk.TreeStoreNew(glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_INT)
 	if err != nil {
 		log.Fatal("Unable to create tree store:", err)
 	}
@@ -31,9 +32,12 @@ func NewStore() *gtk.TreeStore {
 	return store
 }
 
+var mails = map[int]*imap.Msg{}
+
 func handleActions(a any, store *gtk.TreeStore) {
 	switch a := a.(type) {
 	case ClearMsgs:
+		mails = map[int]*imap.Msg{}
 		store.Clear()
 	case AddMsg:
 		m := a.Msg
@@ -50,6 +54,12 @@ func handleActions(a any, store *gtk.TreeStore) {
 		if err := store.SetValue(msg, COLUMN_FROM, m.From); err != nil {
 			log.Fatal("Unable set value:", err)
 		}
+		id := len(mails)
+		mails[id] = &m
+		if err := store.SetValue(msg, COLUMN_OBJ, id); err != nil {
+			log.Fatal("Unable set obj value:", err)
+		}
+
 		/*
 			if err := store.SetValue(msg, COLUMN_TO, m.To); err != nil {
 				log.Fatal("Unable set value:", err)

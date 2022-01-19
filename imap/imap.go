@@ -6,6 +6,7 @@ package imap
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"mime"
 	"net/mail"
@@ -19,17 +20,6 @@ import (
 	"github.com/parro-it/posta/config"
 )
 
-/*
-type clientEntry struct {
-	Account config.Account
-	Client  *client.Client
-}
-
-type ClientReady struct {
-	C       *client.Client
-	Account string
-}
-*/
 // Account encapsulates a
 // connection to an imap server
 // and the configuration to make it.
@@ -48,10 +38,15 @@ type Folder struct {
 }
 
 type Msg struct {
+	Uid     uint32
 	Date    time.Time
 	From    string
 	To      []string
 	Subject string
+	Body    string
+	mail    *mail.Message
+	Account string
+	Folder  *Folder
 }
 
 var accounts = map[string]*Account{}
@@ -67,6 +62,45 @@ func AccountByName(name string) (*Account, error) {
 type Result[T any] struct {
 	Res chan T
 	Err error
+}
+
+func (acc *Account) FetchBody(msg *Msg) error {
+
+	var section imap.BodySectionName
+	section.Specifier = imap.EntireSpecifier
+
+	var err error
+	if _, err = acc.client.Select(msg.Folder.Path, true); err != nil {
+		return err
+	}
+
+	seqset := new(imap.SeqSet)
+	seqset.AddRange(msg.Uid, msg.Uid)
+
+	// Get the whole message body
+	items := []imap.FetchItem{section.FetchItem()}
+	ch := make(chan *imap.Message, 1)
+	if err = acc.client.Fetch(seqset, items, ch); err != nil {
+		return err
+	}
+
+	res := <-ch
+	r := res.GetBody(&section)
+	if r == nil {
+		return fmt.Errorf("Server didn't returned message body")
+	}
+	/*
+		var m *mail.Message
+		if m, err = mail.ReadMessage(r); err != nil {
+			return fmt.Errorf("Cannot read message: %s\n", err.Error())
+		}
+	*/
+	body, err := io.ReadAll(r /*m.Body*/)
+	if err != nil {
+		return err
+	}
+	msg.Body = string(body)
+	return nil
 }
 
 func (acc *Account) Login() *Result[struct{}] {
@@ -163,12 +197,17 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 	go func() {
 		defer close(res.Res)
 		for msg := range ch {
+
 			r := msg.GetBody(&section)
 			if r == nil {
 				log.Println("Server didn't returned message body")
 				continue
 			}
-			out := Msg{}
+			out := Msg{
+				Uid:     msg.SeqNum,
+				Account: acc.Cfg.Name,
+				Folder:  &folder,
+			}
 
 			var m *mail.Message
 			var err error
@@ -176,7 +215,7 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 				log.Printf("Cannot read message: %s\n", err.Error())
 				continue
 			}
-
+			out.mail = m
 			if out.Date, err = m.Header.Date(); err != nil {
 				log.Printf("Cannot read message date: %s\n", err.Error())
 				continue
@@ -233,102 +272,3 @@ func Start(ctx context.Context) chan error {
 	}()
 	return res
 }
-
-/*
-// ClientManager is a component that
-// manage connection and login to imap
-// accounts. It also respond to a query
-// action to get a connected client by
-// name.
-func Start(ctx context.Context) chan error {
-	res := make(chan error)
-	aa := app.ListenAction2[QueryClient, ListFolder]()
-	appStarted := app.ListenAction[app.AppStarted]()
-
-	go func() {
-		defer close(res)
-		<-appStarted
-
-		clientsConfig := map[string]clientEntry{}
-
-		// load all configured accounts from config
-		// and map them by name
-		for _, a := range config.Values.Accounts {
-			clientsConfig[a.Name] = clientEntry{a, nil}
-		}
-
-		for a := range aa {
-			switch action := a.(type) {
-			case ListFolder:
-				fmt.Printf("LISTFOLDER %s\n", action.AccountName)
-				ce, found := clientsConfig[action.AccountName]
-				if !found {
-					panic(action.AccountName + " not found")
-				}
-				if ce.Client == nil {
-					if err := connectClient(&ce); err != nil {
-						res <- err
-						return
-					}
-				}
-				if err := ce.Client.List("", "*", action.Res); err != nil {
-					res <- err
-					return
-				}
-			case QueryClient:
-				ce, found := clientsConfig[action.AccountName]
-				if !found {
-					close(action.Res)
-					continue
-				}
-
-				if ce.Client == nil {
-					if err := connectClient(&ce); err != nil {
-						res <- err
-						return
-					}
-				}
-
-				action.Res <- ce.Client
-				close(action.Res)
-			}
-
-		}
-
-	}()
-	return res
-}
-
-func connectClient(ce *clientEntry) error {
-	var err error
-	if ce.Account.StartTLS {
-		if ce.Client, err = client.Dial(ce.Account.Addr); err != nil {
-			return err
-		}
-
-		if err = ce.Client.StartTLS(nil); err != nil {
-			return err
-		}
-
-	} else {
-		if ce.Client, err = client.DialTLS(ce.Account.Addr, nil); err != nil {
-			return err
-		}
-	}
-
-	if err := ce.Client.Login(ce.Account.User, ce.Account.Pass); err != nil {
-		return err
-	}
-	return nil
-}
-
-type QueryClient struct {
-	Res         chan *client.Client
-	AccountName string
-}
-
-type ListFolder struct {
-	Res         chan *imap.MailboxInfo
-	AccountName string
-}
-*/

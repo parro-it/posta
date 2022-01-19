@@ -50,7 +50,7 @@ func View() *gtk.ScrolledWindow {
 	if err != nil {
 		log.Fatal("Unable to create tree view:", err)
 	}
-
+	tree.SetHeadersVisible(false)
 	tree.AppendColumn(createImageColumn(" ", COLUMN_ICON))
 	tree.AppendColumn(createTextColumn(" ", COLUMN_TEXT))
 

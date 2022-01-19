@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/parro-it/posta/app"
+	"github.com/parro-it/posta/imap"
 )
 
 // Add a column to the tree view (during the initialization of the tree view)
@@ -47,8 +49,8 @@ func createImageColumn(title string, id int) *gtk.TreeViewColumn {
 const (
 	COLUMN_DATE = iota
 	COLUMN_FROM
-	//COLUMN_TO
 	COLUMN_SUBJECT
+	COLUMN_OBJ
 )
 
 // Creates a tree view and the tree store that holds its data
@@ -59,8 +61,11 @@ func View() *gtk.ScrolledWindow {
 	}
 	tree.AppendColumn(createTextColumn("Date", COLUMN_DATE))
 	tree.AppendColumn(createTextColumn("From", COLUMN_FROM))
-	//tree.AppendColumn(createTextColumn("To", COLUMN_TO))
 	tree.AppendColumn(createTextColumn("Subject", COLUMN_SUBJECT))
+
+	sel, _ := tree.GetSelection()
+	sel.SetMode(gtk.SELECTION_SINGLE)
+	sel.Connect("changed", treeSelectionChangedCB)
 
 	// Creating a tree store. This is what holds the data that will be shown on our tree view.
 	store := NewStore()
@@ -74,20 +79,34 @@ func View() *gtk.ScrolledWindow {
 	return scroll
 }
 
-/*
-// Handle selection
 func treeSelectionChangedCB(selection *gtk.TreeSelection) {
 	var iter *gtk.TreeIter
 	var model gtk.ITreeModel
 	var ok bool
 	model, iter, ok = selection.GetSelected()
+
 	if ok {
-		tpath, err := model.(*gtk.TreeModel).GetPath(iter)
+		v, err := model.ToTreeModel().GetValue(iter, COLUMN_OBJ)
 		if err != nil {
 			log.Printf("treeSelectionChangedCB: Could not get path from model: %s\n", err)
 			return
 		}
-		log.Printf("treeSelectionChangedCB: selected path: %s\n", tpath)
+		s, err := v.GoValue()
+		if err != nil {
+			log.Printf("GoValue: %s\n", err)
+			return
+		}
+
+		var m *imap.Msg
+		m = mails[s.(int)]
+		//fmt.Println(*m)
+		if ok {
+			app.PostAction(MsgSelect{Msg: m})
+		}
+
 	}
 }
-*/
+
+type MsgSelect struct {
+	Msg *imap.Msg
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
 	"github.com/parro-it/posta/imap"
+	"github.com/parro-it/posta/msgbody"
 	"github.com/parro-it/posta/msgs"
 )
 
@@ -30,16 +31,23 @@ func mainWindow() *gtk.Window {
 	win.SetPosition(gtk.WIN_POS_CENTER)
 	win.SetDefaultSize(800, 600)
 
-	horzCnt, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	horzCnt1, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	horzCnt.Pack1(folders.View(), true, true)
-	horzCnt.Pack2(msgs.View(), true, true)
-	horzCnt.SetPosition(250)
-	horzCnt.SetWideHandle(true)
-	win.Add(horzCnt)
+	horzCnt1.Pack1(folders.View(), true, true)
+	horzCnt2, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	horzCnt2.Pack1(msgs.View(), true, true)
+	horzCnt2.Pack2(msgbody.View(), true, true)
+	horzCnt1.Pack2(horzCnt2, true, true)
+
+	horzCnt1.SetPosition(250)
+	horzCnt1.SetWideHandle(true)
+	win.Add(horzCnt1)
 
 	return win
 }
@@ -50,6 +58,7 @@ func main() {
 		folders.Start,
 		imap.Start,
 		msgs.Start,
+		msgbody.Start,
 	)
 
 	gtk.Init(nil)
