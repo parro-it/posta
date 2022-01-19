@@ -29,23 +29,24 @@ func mainWindow() *gtk.Window {
 		gtk.MainQuit()
 	})
 	win.SetPosition(gtk.WIN_POS_CENTER)
-	win.SetDefaultSize(800, 600)
+	win.SetDefaultSize(1600, 800)
 
 	horzCnt1, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	horzCnt1.Pack1(folders.View(), true, true)
+	horzCnt1.Pack1(folders.View(), false, false)
 	horzCnt2, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	horzCnt2.Pack1(msgs.View(), true, true)
-	horzCnt2.Pack2(msgbody.View(), true, true)
+	horzCnt2.Pack2(msgbody.View(), false, false)
 	horzCnt1.Pack2(horzCnt2, true, true)
 
-	horzCnt1.SetPosition(250)
+	horzCnt1.SetPosition(200)
+	horzCnt2.SetPosition(1000)
 	horzCnt1.SetWideHandle(true)
 	win.Add(horzCnt1)
 

@@ -10,7 +10,7 @@ import (
 
 // Add a column to the tree view (during the initialization of the tree view)
 // We need to distinct the type of data shown in either column.
-func createTextColumn(title string, id int) *gtk.TreeViewColumn {
+func createTextColumn(title string, w int, id int) *gtk.TreeViewColumn {
 	// In this column we want to show text, hence create a text renderer
 	cellRenderer, err := gtk.CellRendererTextNew()
 	if err != nil {
@@ -23,6 +23,9 @@ func createTextColumn(title string, id int) *gtk.TreeViewColumn {
 	if err != nil {
 		log.Fatal("Unable to create cell column:", err)
 	}
+
+	column.SetFixedWidth(w)
+	column.SetSizing(gtk.TREE_VIEW_COLUMN_FIXED)
 	column.SetResizable(true)
 	column.SetReorderable(true)
 	return column
@@ -59,9 +62,9 @@ func View() *gtk.ScrolledWindow {
 	if err != nil {
 		log.Fatal("Unable to create tree view:", err)
 	}
-	tree.AppendColumn(createTextColumn("Date", COLUMN_DATE))
-	tree.AppendColumn(createTextColumn("From", COLUMN_FROM))
-	tree.AppendColumn(createTextColumn("Subject", COLUMN_SUBJECT))
+	tree.AppendColumn(createTextColumn("Date", 160, COLUMN_DATE))
+	tree.AppendColumn(createTextColumn("From", 300, COLUMN_FROM))
+	tree.AppendColumn(createTextColumn("Subject", 60, COLUMN_SUBJECT))
 
 	sel, _ := tree.GetSelection()
 	sel.SetMode(gtk.SELECTION_SINGLE)
