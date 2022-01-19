@@ -2,6 +2,7 @@ package msgbody
 
 import (
 	"context"
+	"strings"
 
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/chans"
@@ -25,14 +26,22 @@ func Start(ctx context.Context) chan error {
 			if err != nil {
 				panic(err)
 			}
-			app.PostAction(MsgSetBody{
-				Text: msgsel.Msg.Body,
+			app.PostAction(MsgSetAll{
+				Body:    msgsel.Msg.Body,
+				Subject: msgsel.Msg.Subject,
+				From:    msgsel.Msg.From,
+				To:      strings.Join(msgsel.Msg.To, "; "),
+				//Cc:      strings.Join(msgsel.Msg.Cc, "; "),
 			})
 		}
 	}()
 	return res
 }
 
-type MsgSetBody struct {
-	Text string
+type MsgSetAll struct {
+	Body    string
+	Subject string
+	From    string
+	To      string
+	Cc      string
 }

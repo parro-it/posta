@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"mime"
 	"net/mail"
 	"strings"
@@ -176,9 +175,6 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 	}
 	ch := make(chan *imap.Message)
 
-	var section imap.BodySectionName
-	section.Specifier = imap.HeaderSpecifier
-
 	go func() {
 		var mbox *imap.MailboxStatus
 
@@ -196,62 +192,53 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 		seqset.AddRange(1, mbox.Messages)
 
 		// Get the whole message body
-		items := []imap.FetchItem{section.FetchItem()}
+		items := []imap.FetchItem{imap.FetchEnvelope}
 		res.Err = acc.client.Fetch(seqset, items, ch)
 	}()
 
 	go func() {
 		defer close(res.Res)
+		dec := new(mime.WordDecoder)
+
 		for msg := range ch {
 
-			r := msg.GetBody(&section)
+			/*r := msg.GetBody(&section)
 			if r == nil {
 				log.Println("Server didn't returned message body")
 				continue
-			}
+			}*/
+			en := msg.Envelope
+
 			out := Msg{
 				Uid:     msg.SeqNum,
 				Account: acc.Cfg.Name,
 				Folder:  &folder,
+				Date:    en.Date,
+				From:    en.From[0].PersonalName,
+				Subject: en.Subject,
+			}
+			if out.From == "" {
+				out.From = en.From[0].Address()
+			}
+			fd, err := dec.Decode(out.From)
+			if err == nil {
+				out.From = fd
+			}
+			for _, a := range en.To {
+				var s string
+				if a.PersonalName != "" {
+					s = a.PersonalName
+				} else {
+					s = a.Address()
+				}
+
+				sd, err := dec.Decode(s)
+				if err != nil {
+					sd = s
+				}
+				out.To = append(out.To, sd)
 			}
 
-			var m *mail.Message
-			var err error
-			if m, err = mail.ReadMessage(r); err != nil {
-				log.Printf("Cannot read message: %s\n", err.Error())
-				continue
-			}
-			out.mail = m
-			if out.Date, err = m.Header.Date(); err != nil {
-				log.Printf("Cannot read message date: %s\n", err.Error())
-				continue
-			}
-
-			var from []*mail.Address
-
-			if from, err = m.Header.AddressList("From"); err != nil {
-				log.Printf("Cannot read message From: %s\n", err.Error())
-				continue
-			}
-			out.From = from[0].Name
-
-			var to []*mail.Address
-
-			if to, err = m.Header.AddressList("To"); err != nil {
-				log.Printf("Cannot read message From: %s\n", err.Error())
-				continue
-			}
-			for _, a := range to {
-				out.To = append(out.To, a.Name)
-			}
-
-			dec := new(mime.WordDecoder)
-			subj := m.Header.Get("Subject")
-
-			if out.Subject, err = dec.DecodeHeader(subj); err != nil {
-				log.Printf("Cannot decode subject: %s\n", err.Error())
-				out.Subject = subj
-			}
 			res.Res <- out
 		}
 	}()

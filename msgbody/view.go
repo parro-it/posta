@@ -113,17 +113,21 @@ func View() *gtk.ScrolledWindow {
 		log.Fatal("Unable to create scroolbox:", err)
 	}
 	scroll.Add(ctrls)
-	ch := app.ListenAction[MsgSetBody]()
+	ch := app.ListenAction[MsgSetAll]()
 
 	go func() {
-		for setBody := range ch {
-			setBody := setBody
+		for setMsg := range ch {
+			setMsg := setMsg
 			glib.IdleAdd(func() bool {
 				b, err := text.GetBuffer()
 				if err != nil {
 					panic(err)
 				}
-				b.SetText(setBody.Text)
+				b.SetText(setMsg.Body)
+				subj.SetText(setMsg.Subject)
+				from.SetText(setMsg.From)
+				to.SetText(setMsg.To)
+				//to.SetText(setMsg.To)
 				return false
 			})
 		}
