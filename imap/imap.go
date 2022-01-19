@@ -4,9 +4,9 @@
 package imap
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"mime"
 	"net/mail"
@@ -85,20 +85,26 @@ func (acc *Account) FetchBody(msg *Msg) error {
 	}
 
 	res := <-ch
-	r := res.GetBody(&section)
-	if r == nil {
-		return fmt.Errorf("Server didn't returned message body")
-	}
+	out := res.Format()
 	/*
-		var m *mail.Message
-		if m, err = mail.ReadMessage(r); err != nil {
-			return fmt.Errorf("Cannot read message: %s\n", err.Error())
+		_ = out
+		r := res.GetBody(&section)
+		if r == nil {
+			return fmt.Errorf("Server didn't returned message body")
+		}
+		/ *
+			var m *mail.Message
+			if m, err = mail.ReadMessage(r); err != nil {
+				return fmt.Errorf("Cannot read message: %s\n", err.Error())
+			}
+		* /
+		body, err := io.ReadAll(r)
+		if err != nil {
+			return err
 		}
 	*/
-	body, err := io.ReadAll(r /*m.Body*/)
-	if err != nil {
-		return err
-	}
+	buf := out[1].(*bytes.Buffer)
+	body := buf.String()
 	msg.Body = string(body)
 	return nil
 }

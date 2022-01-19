@@ -98,7 +98,7 @@ func treeSelectionChangedCB(selection *gtk.TreeSelection) {
 		}
 
 		var m *imap.Msg
-		m = mails[s.(int)]
+		m, ok = mails[s.(int)]
 		//fmt.Println(*m)
 		if ok {
 			app.PostAction(MsgSelect{Msg: m})
