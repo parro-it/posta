@@ -1,12 +1,23 @@
 package msgs
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/imap"
+)
+
+var dtFormat = "2006-01-02 15:04"
+
+const (
+	COLUMN_DATE = iota
+	COLUMN_FROM
+	COLUMN_SUBJECT
+	COLUMN_OBJ
 )
 
 func NewStore() *gtk.TreeStore {
@@ -15,7 +26,148 @@ func NewStore() *gtk.TreeStore {
 		log.Fatal("Unable to create tree store:", err)
 	}
 	ch := app.ListenAction2[AddMsg, ClearMsgs]()
+	store.SetSortFunc(COLUMN_DATE, func(model *gtk.TreeModel, a, b *gtk.TreeIter) int {
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println(err)
+			}
+		}()
+		av, err := model.GetValue(a, COLUMN_DATE)
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		var avs string
+		avi, err := av.GoValue()
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		avs = avi.(string)
 
+		bv, err := model.GetValue(b, COLUMN_DATE)
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		var bvs string
+		bvi, err := bv.GoValue()
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		bvs = bvi.(string)
+		var adt time.Time
+		var bdt time.Time
+
+		if avs != "" {
+			adt, err = time.Parse(dtFormat, avs)
+			if err != nil {
+				//panic(err)
+				return 0
+			}
+		}
+
+		if bvs != "" {
+			bdt, err = time.Parse(dtFormat, bvs)
+			if err != nil {
+				//panic(err)
+				return 0
+			}
+		}
+		if adt == bdt {
+			return 0
+		}
+		if adt.After(bdt) {
+			return -1
+		}
+		return 1
+	})
+
+	store.SetSortFunc(COLUMN_FROM, func(model *gtk.TreeModel, a, b *gtk.TreeIter) int {
+
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println(err)
+			}
+		}()
+
+		av, err := model.GetValue(a, COLUMN_FROM)
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		var avs string
+		avi, err := av.GoValue()
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		avs = avi.(string)
+
+		bv, err := model.GetValue(b, COLUMN_FROM)
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		var bvs string
+		bvi, err := bv.GoValue()
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		bvs = bvi.(string)
+
+		if avs == bvs {
+			return 0
+		}
+		if avs > bvs {
+			return -1
+		}
+		return 1
+	})
+	store.SetSortFunc(COLUMN_SUBJECT, func(model *gtk.TreeModel, a, b *gtk.TreeIter) int {
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println(err)
+			}
+		}()
+
+		av, err := model.GetValue(a, COLUMN_SUBJECT)
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		var avs string
+		avi, err := av.GoValue()
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		avs = avi.(string)
+
+		bv, err := model.GetValue(b, COLUMN_SUBJECT)
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		var bvs string
+		bvi, err := bv.GoValue()
+		if err != nil {
+			//panic(err)
+			return 0
+		}
+		bvs = bvi.(string)
+
+		if avs == bvs {
+			return 0
+		}
+		if avs > bvs {
+			return -1
+		}
+		return 1
+	})
+	//store.SetSortColumnId(COLUMN_DATE, gtk.SORT_DESCENDING)
 	go func() {
 
 		//folders := map[string]*gtk.TreeIter{}
@@ -47,7 +199,7 @@ func handleActions(a any, store *gtk.TreeStore) {
 			log.Fatal("Unable set value:", err)
 		}
 
-		if err := store.SetValue(msg, COLUMN_DATE, m.Date.Format("2006-01-02 15:04")); err != nil {
+		if err := store.SetValue(msg, COLUMN_DATE, m.Date.Format(dtFormat)); err != nil {
 			log.Fatal("Unable set value:", err)
 		}
 

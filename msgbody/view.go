@@ -106,6 +106,10 @@ func View() *gtk.ScrolledWindow {
 	if err != nil {
 		log.Fatal("Unable to create textview:", err)
 	}
+	text.SetMarginBottom(10)
+	text.SetMarginTop(10)
+	text.SetMarginStart(10)
+	text.SetMarginEnd(10)
 	ctrls.PackStart(text, true, true, 2)
 
 	scroll, err := gtk.ScrolledWindowNew(nil, nil)

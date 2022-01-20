@@ -66,6 +66,23 @@ func View() *gtk.ScrolledWindow {
 	if err != nil {
 		log.Fatal("Unable to create scroolbox for tree view:", err)
 	}
+	styleCtx, err := scroll.GetStyleContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+	styleCtx.AddClass("folder-view")
+	provider, err := gtk.CssProviderNew()
+	if err != nil {
+		log.Fatal(err)
+	}
+	provider.LoadFromData(`
+		.folder-view {
+			box-shadow: 1px 0px 15px black;
+			margin-right: 10px;
+		}
+	`)
+	styleCtx.AddProvider(provider, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+	styleCtx.Save()
 	scroll.Add(tree)
 	return scroll
 }

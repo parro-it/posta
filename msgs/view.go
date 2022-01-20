@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/imap"
 )
@@ -16,6 +17,7 @@ func createTextColumn(title string, w int, id int) *gtk.TreeViewColumn {
 	if err != nil {
 		log.Fatal("Unable to create text cell renderer:", err)
 	}
+	cellRenderer.SetProperty("ellipsize", pango.ELLIPSIZE_END)
 
 	// Tell the renderer where to pick input from. Text renderer understands
 	// the "text" property.
@@ -23,7 +25,7 @@ func createTextColumn(title string, w int, id int) *gtk.TreeViewColumn {
 	if err != nil {
 		log.Fatal("Unable to create cell column:", err)
 	}
-
+	column.SetSortColumnID(id)
 	column.SetFixedWidth(w)
 	column.SetSizing(gtk.TREE_VIEW_COLUMN_FIXED)
 	column.SetResizable(true)
@@ -49,13 +51,6 @@ func createImageColumn(title string, id int) *gtk.TreeViewColumn {
 	return column
 }
 
-const (
-	COLUMN_DATE = iota
-	COLUMN_FROM
-	COLUMN_SUBJECT
-	COLUMN_OBJ
-)
-
 // Creates a tree view and the tree store that holds its data
 func View() *gtk.ScrolledWindow {
 	tree, err := gtk.TreeViewNew()
@@ -73,12 +68,29 @@ func View() *gtk.ScrolledWindow {
 	// Creating a tree store. This is what holds the data that will be shown on our tree view.
 	store := NewStore()
 	tree.SetModel(store)
-
 	scroll, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		log.Fatal("Unable to create scroolbox for tree view:", err)
 	}
 	scroll.Add(tree)
+	styleCtx, err := scroll.GetStyleContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+	styleCtx.AddClass("folder-view")
+	provider, err := gtk.CssProviderNew()
+	if err != nil {
+		log.Fatal(err)
+	}
+	provider.LoadFromData(`
+		.folder-view {
+			box-shadow: 1px 0px 15px black;
+			margin-right: 10px;
+		}
+	`)
+	styleCtx.AddProvider(provider, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+	styleCtx.Save()
+
 	return scroll
 }
 
