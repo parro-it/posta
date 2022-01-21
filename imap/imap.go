@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"mime"
 	"net/mail"
 	"strings"
@@ -14,6 +16,8 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
+	"github.com/emersion/go-message"
+
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/config"
@@ -65,9 +69,6 @@ type Result[T any] struct {
 
 func (acc *Account) FetchBody(msg *Msg) error {
 
-	var section imap.BodySectionName
-	section.Specifier = imap.EntireSpecifier
-
 	var err error
 	if _, err = acc.client.Select(msg.Folder.Path, true); err != nil {
 		return err
@@ -77,6 +78,8 @@ func (acc *Account) FetchBody(msg *Msg) error {
 	seqset.AddRange(msg.Uid, msg.Uid)
 
 	// Get the whole message body
+	var section imap.BodySectionName
+
 	items := []imap.FetchItem{section.FetchItem()}
 	ch := make(chan *imap.Message, 1)
 	if err = acc.client.Fetch(seqset, items, ch); err != nil {
@@ -84,27 +87,65 @@ func (acc *Account) FetchBody(msg *Msg) error {
 	}
 
 	res := <-ch
-	out := res.Format()
-	/*
-		_ = out
-		r := res.GetBody(&section)
-		if r == nil {
-			return fmt.Errorf("Server didn't returned message body")
-		}
-		/ *
-			var m *mail.Message
-			if m, err = mail.ReadMessage(r); err != nil {
-				return fmt.Errorf("Cannot read message: %s\n", err.Error())
+	/*s, err := json.MarshalIndent(res.BodyStructure, "  ", "  ")
+	if err != nil {
+		panic(err)
+	}*/
+	r := res.GetBody(&section)
+	m, err := message.Read(r)
+	if message.IsUnknownCharset(err) {
+		// This error is not fatal
+		log.Println("Unknown encoding:", err)
+	} else if err != nil {
+		log.Fatal(err)
+	}
+	var s string
+
+	if mr := m.MultipartReader(); mr != nil {
+		// This is a multipart message
+		s = "This is a multipart message containing:\n"
+		for {
+			p, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Fatal(err)
 			}
-		* /
-		body, err := io.ReadAll(r)
-		if err != nil {
-			return err
+
+			t, _, _ := p.Header.ContentType()
+			if t == "text/plain" {
+				var buf bytes.Buffer
+				_, err = io.Copy(&buf, p.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+				s = buf.String()
+				break
+			}
+			s += fmt.Sprintf("\t- A part with type %s \n", t)
 		}
-	*/
+	} else {
+		t, _, _ := m.Header.ContentType()
+		if t == "text/plain" {
+			var buf bytes.Buffer
+			_, err = io.Copy(&buf, m.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			s = buf.String()
+		} else {
+			s = fmt.Sprintf("This is a non-multipart message with type %s \n", t)
+
+		}
+	}
+	/*for k, v := range res.BodyStructure.Parts {
+		st += fmt.Sprintf("Name: %s\tcontent type:%s\n")
+	}*/
+	/*out := res.Format()
+
 	buf := out[1].(*bytes.Buffer)
-	body := buf.String()
-	msg.Body = string(body)
+	body := buf.String()*/
+	msg.Body = s
 	return nil
 }
 
