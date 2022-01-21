@@ -131,7 +131,7 @@ func View() *gtk.ScrolledWindow {
 				subj.SetText(setMsg.Subject)
 				from.SetText(setMsg.From)
 				to.SetText(setMsg.To)
-				//to.SetText(setMsg.To)
+				cc.SetText(setMsg.CC)
 				return false
 			})
 		}

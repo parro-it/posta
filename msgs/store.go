@@ -3,6 +3,7 @@ package msgs
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gotk3/gotk3/glib"
@@ -203,7 +204,7 @@ func handleActions(a any, store *gtk.TreeStore) {
 			log.Fatal("Unable set value:", err)
 		}
 
-		if err := store.SetValue(msg, COLUMN_FROM, m.From); err != nil {
+		if err := store.SetValue(msg, COLUMN_FROM, strings.Join(m.From, "; ")); err != nil {
 			log.Fatal("Unable set value:", err)
 		}
 		id := len(mails)

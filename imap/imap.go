@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime"
 	"net/mail"
 	"strings"
 	"time"
@@ -44,8 +43,9 @@ type Folder struct {
 type Msg struct {
 	Uid     uint32
 	Date    time.Time
-	From    string
+	From    []string
 	To      []string
+	CC      []string
 	Subject string
 	Body    string
 	mail    *mail.Message
@@ -270,7 +270,7 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 
 	go func() {
 		defer close(res.Res)
-		dec := new(mime.WordDecoder)
+		//dec := new(mime.WordDecoder)
 
 		for msg := range ch {
 
@@ -286,34 +286,35 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 				Account: acc.Cfg.Name,
 				Folder:  &folder,
 				Date:    en.Date,
-				From:    en.From[0].PersonalName,
 				Subject: en.Subject,
 			}
-			if out.From == "" {
-				out.From = en.From[0].Address()
-			}
-			fd, err := dec.Decode(out.From)
+
+			/*fd, err := dec.Decode(out.From)
 			if err == nil {
 				out.From = fd
-			}
-			for _, a := range en.To {
-				var s string
-				if a.PersonalName != "" {
-					s = a.PersonalName
-				} else {
-					s = a.Address()
-				}
-
-				sd, err := dec.Decode(s)
-				if err != nil {
-					sd = s
-				}
-				out.To = append(out.To, sd)
-			}
+			}*/
+			out.From = formatAddresses(en.From)
+			out.To = formatAddresses(en.To)
+			out.CC = formatAddresses(en.Cc)
 
 			res.Res <- out
 		}
 	}()
+	return res
+}
+
+func formatAddresses(addrs []*imap.Address) []string {
+	var res []string
+	for _, a := range addrs {
+		var s string
+		if a.PersonalName != "" {
+			s = a.PersonalName
+		} else {
+			s = a.Address()
+		}
+
+		res = append(res, s)
+	}
 	return res
 }
 

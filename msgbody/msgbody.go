@@ -29,7 +29,8 @@ func Start(ctx context.Context) chan error {
 			app.PostAction(MsgSetAll{
 				Body:    msgsel.Msg.Body,
 				Subject: msgsel.Msg.Subject,
-				From:    msgsel.Msg.From,
+				CC:      strings.Join(msgsel.Msg.CC, "; "),
+				From:    strings.Join(msgsel.Msg.From, "; "),
 				To:      strings.Join(msgsel.Msg.To, "; "),
 				//Cc:      strings.Join(msgsel.Msg.Cc, "; "),
 			})
@@ -43,5 +44,5 @@ type MsgSetAll struct {
 	Subject string
 	From    string
 	To      string
-	Cc      string
+	CC      string
 }

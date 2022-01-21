@@ -71,7 +71,7 @@ func TestListMessages(t *testing.T) {
 	}*/
 
 	assert.Equal(t, []Msg{
-		{Date: time.Date(2022, time.January, 18, 11, 21, 54, 0, msgs[0].Date.Location()), From: "Mail Delivery System", To: []string{""}, Subject: "Delayed Mail (still being retried)"},
-		{Date: time.Date(2022, time.January, 18, 11, 41, 19, 0, msgs[1].Date.Location()), From: "Mail Delivery System", To: []string{""}, Subject: "Delayed Mail (still being retried)"}}, msgs)
+		{Date: time.Date(2022, time.January, 18, 11, 21, 54, 0, msgs[0].Date.Location()), From: []string{"Mail Delivery System"}, To: []string{""}, Subject: "Delayed Mail (still being retried)"},
+		{Date: time.Date(2022, time.January, 18, 11, 41, 19, 0, msgs[1].Date.Location()), From: []string{"Mail Delivery System"}, To: []string{""}, Subject: "Delayed Mail (still being retried)"}}, msgs)
 
 }
