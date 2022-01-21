@@ -27,11 +27,12 @@ func Start(ctx context.Context) chan error {
 				panic(err)
 			}
 			app.PostAction(MsgSetAll{
-				Body:    msgsel.Msg.Body,
-				Subject: msgsel.Msg.Subject,
-				CC:      strings.Join(msgsel.Msg.CC, "; "),
-				From:    strings.Join(msgsel.Msg.From, "; "),
-				To:      strings.Join(msgsel.Msg.To, "; "),
+				Attachments: msgsel.Msg.Attachments,
+				Body:        msgsel.Msg.Body,
+				Subject:     msgsel.Msg.Subject,
+				CC:          strings.Join(msgsel.Msg.CC, "; "),
+				From:        strings.Join(msgsel.Msg.From, "; "),
+				To:          strings.Join(msgsel.Msg.To, "; "),
 				//Cc:      strings.Join(msgsel.Msg.Cc, "; "),
 			})
 		}
@@ -40,9 +41,10 @@ func Start(ctx context.Context) chan error {
 }
 
 type MsgSetAll struct {
-	Body    string
-	Subject string
-	From    string
-	To      string
-	CC      string
+	Attachments []imap.Attachment
+	Body        string
+	Subject     string
+	From        string
+	To          string
+	CC          string
 }

@@ -41,16 +41,22 @@ type Folder struct {
 }
 
 type Msg struct {
-	Uid     uint32
-	Date    time.Time
-	From    []string
-	To      []string
-	CC      []string
-	Subject string
-	Body    string
-	mail    *mail.Message
-	Account string
-	Folder  *Folder
+	Uid         uint32
+	Date        time.Time
+	From        []string
+	To          []string
+	CC          []string
+	Subject     string
+	Body        string
+	mail        *mail.Message
+	Account     string
+	Folder      *Folder
+	Attachments []Attachment
+}
+
+type Attachment struct {
+	reader io.Reader
+	Name   string
 }
 
 var accounts = map[string]*Account{}
@@ -101,7 +107,7 @@ func (acc *Account) FetchBody(msg *Msg) error {
 		log.Fatal(err)
 	}
 	var s string
-
+	msg.Attachments = []Attachment{}
 	if mr := m.MultipartReader(); mr != nil {
 		// This is a multipart message
 		s = "This is a multipart message containing:\n"
@@ -111,6 +117,16 @@ func (acc *Account) FetchBody(msg *Msg) error {
 				break
 			} else if err != nil {
 				log.Fatal(err)
+			}
+
+			disp, params, err := p.Header.ContentDisposition()
+			if disp == "attachment" {
+				att := Attachment{
+					Name:   params["filename"],
+					reader: p.Body,
+				}
+				msg.Attachments = append(msg.Attachments, att)
+				continue
 			}
 
 			t, _, _ := p.Header.ContentType()
