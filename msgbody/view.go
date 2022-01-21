@@ -13,31 +13,44 @@ type flds struct {
 	cc   *gtk.Entry
 	subj *gtk.Entry
 	body *gtk.TextView
+	atts *gtk.ListBox
 }
 
 // Creates a tree view and the tree store that holds its data
-func View() *gtk.ScrolledWindow {
+func View() *gtk.Frame {
 	var flds flds
 
 	var fromFlds *gtk.Box
 	var toFlds *gtk.Box
 	var ccFlds *gtk.Box
 	var subjFlds *gtk.Box
+	var bodyFlds *gtk.ScrolledWindow
+	var left *gtk.Box
+	var right *gtk.ScrolledWindow
 
 	fromFlds, flds.from = fromCtrls()
 	toFlds, flds.to = toCtrls()
 	ccFlds, flds.cc = ccCtrls()
 	subjFlds, flds.subj = subjCtrls()
-	flds.body = bodyCtrls()
+	bodyFlds, flds.body = bodyCtrls()
 
 	ctrls := errs.Must(gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0))
-	ctrls.PackStart(fromFlds, false, false, 2)
-	ctrls.PackStart(toFlds, false, false, 2)
+
+	left = errs.Must(gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0))
+	left.PackStart(fromFlds, false, false, 2)
+	left.PackStart(toFlds, false, false, 2)
+	right, flds.atts = attachmentsCtrls()
+
+	firstLines := errs.Must(gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0))
+	firstLines.PackStart(left, true, true, 2)
+	firstLines.PackStart(right, false, true, 2)
+
+	ctrls.PackStart(firstLines, false, false, 2)
 	ctrls.PackStart(ccFlds, false, false, 2)
 	ctrls.PackStart(subjFlds, false, false, 2)
-	ctrls.PackStart(flds.body, true, true, 2)
+	ctrls.PackStart(bodyFlds, true, true, 2)
 
-	scroll := errs.Must(gtk.ScrolledWindowNew(nil, nil))
+	scroll := errs.Must(gtk.FrameNew(""))
 	scroll.Add(ctrls)
 
 	go setFieldsOnAction(
@@ -66,13 +79,15 @@ func setFieldsOnAction(ch chan MsgSetAll, flds flds) {
 	}
 }
 
-func bodyCtrls() *gtk.TextView {
+func bodyCtrls() (*gtk.ScrolledWindow, *gtk.TextView) {
 	text := errs.Must(gtk.TextViewNew())
 	text.SetMarginBottom(10)
 	text.SetMarginTop(10)
 	text.SetMarginStart(10)
 	text.SetMarginEnd(10)
-	return text
+	scroll := errs.Must(gtk.ScrolledWindowNew(nil, nil))
+	scroll.Add(text)
+	return scroll, text
 }
 
 func subjCtrls() (*gtk.Box, *gtk.Entry) {
@@ -84,6 +99,30 @@ func subjCtrls() (*gtk.Box, *gtk.Entry) {
 	subj := errs.Must(gtk.EntryNew())
 	subjFlds.PackStart(subj, true, true, 2)
 	return subjFlds, subj
+}
+
+func attachmentsCtrls() (*gtk.ScrolledWindow, *gtk.ListBox) {
+	ctrls := errs.Must(gtk.ScrolledWindowNew(nil, nil))
+	fld := errs.Must(gtk.ListBoxNew())
+	ctrls.Add(fld)
+	ctrls.SetShadowType(gtk.SHADOW_OUT)
+	ctrls.SetMinContentWidth(200)
+
+	fld.SetHAlign(gtk.ALIGN_FILL)
+	fld.SetHExpand(true)
+	fld.SetMarginBottom(3)
+	fld.SetMarginStart(3)
+	fld.SetMarginTop(3)
+	fld.SetMarginEnd(3)
+
+	lbl := errs.Must(gtk.LabelNew("File.txt"))
+	lbl.SetHAlign(gtk.ALIGN_START)
+	fld.Add(lbl)
+	lbl = errs.Must(gtk.LabelNew("File2.gif"))
+	lbl.SetHAlign(gtk.ALIGN_START)
+	fld.Add(lbl)
+
+	return ctrls, fld
 }
 
 func ccCtrls() (*gtk.Box, *gtk.Entry) {
