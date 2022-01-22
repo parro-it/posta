@@ -1,10 +1,23 @@
 package chans
 
-import "context"
+import (
+	"context"
+)
+
+// CollectIn stores all values received from ch
+// in a slice, and send it to out channel when ch
+// is closed. The out channel is closed afterwards.
+func CollectIn[T any](ch chan T, out chan []T) {
+	out <- Collect(ch)
+	close(out)
+}
 
 // Collect stores all values received from ch
 // in a slice, and returns it when ch is closed.
 func Collect[T any](ch chan T) []T {
+	if ch == nil {
+		return nil
+	}
 	var res []T
 	for v := range ch {
 		res = append(res, v)
