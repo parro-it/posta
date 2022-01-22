@@ -9,22 +9,47 @@ import (
 )
 
 func TestWithContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	in, _ := makeTestCh()
-	ch := chans.WithContext(ctx, in)
-	v, ok := <-ch
-	assert.Equal(t, 0, v)
-	assert.True(t, ok)
+	t.Run("out chan is immediately closed upon ctx cancel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		in := make(chan int)
+		ch := chans.WithContext(ctx, in)
 
-	v, ok = <-ch
-	assert.Equal(t, 1, v)
-	assert.True(t, ok)
+		sem := make(chan struct{})
+		go func() {
+			in <- 0
+			in <- 1
+			<-sem
+			select {
+			case in <- 2:
+				assert.Fail(t, "in chan should be locked because context is canceled")
+			default:
+				// test pass: in is locked.
+			}
+		}()
 
-	cancel()
+		v, ok := <-ch
+		assert.Equal(t, 0, v)
+		assert.True(t, ok)
 
-	v, ok = <-ch
-	assert.Equal(t, 0, v)
-	assert.False(t, ok)
+		v, ok = <-ch
+		assert.Equal(t, 1, v)
+		assert.True(t, ok)
+
+		cancel()
+		close(sem)
+
+		v, ok = <-ch
+		assert.Equal(t, 0, v)
+		assert.False(t, ok)
+	})
+
+	t.Run("out chan is closed normally when input chan is closed", func(t *testing.T) {
+		in, expected := makeTestCh()
+		ch := chans.WithContext(context.Background(), in)
+		actual := chans.Collect(ch)
+		assert.Equal(t, expected, actual)
+
+	})
 }
 
 func TestCollect(t *testing.T) {

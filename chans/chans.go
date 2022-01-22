@@ -5,8 +5,8 @@ import (
 )
 
 // CollectIn stores all values received from ch
-// in a slice, and send it to out channel when ch
-// is closed. The out channel is closed afterwards.
+// in a slice, and send the slice to out channel
+// when ch is closed. The out channel is closed afterwards.
 func CollectIn[T any](ch chan T, out chan []T) {
 	out <- Collect(ch)
 	close(out)
@@ -22,6 +22,20 @@ func Collect[T any](ch chan T) []T {
 	for v := range ch {
 		res = append(res, v)
 	}
+	return res
+}
+
+// ChunksSplit groups values received from ch
+// in chunks of chunkLen size, and send each chunk to a
+// channel of slices.
+func ChunksSplit[T any](ch chan T, chunkLen int) chan []T {
+	if ch == nil {
+		return nil
+	}
+	res := make(chan []T)
+	/*for v := range ch {
+		res = append(res, v)
+	}*/
 	return res
 }
 

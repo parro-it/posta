@@ -21,6 +21,7 @@ func (l outOf[T]) Equal(a any) bool {
 	}
 	return false
 }
+
 func (l outOf[T]) Close() {
 	close(l)
 }
