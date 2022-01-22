@@ -1,4 +1,4 @@
-package plex
+package chans
 
 type Out[T any] struct {
 	Value T

@@ -1,17 +1,17 @@
-package plex_test
+package chans_test
 
 import (
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/parro-it/posta/plex"
+	"github.com/parro-it/posta/chans"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDemux(t *testing.T) {
 	t.Run("Send with 2 output channels", func(t *testing.T) {
-		var q plex.Demux[int]
+		var q chans.Demux[int]
 
 		q.Start()
 		// close the demux once done
@@ -19,8 +19,8 @@ func TestDemux(t *testing.T) {
 
 		results1 := make(chan interface{})
 		results2 := make(chan interface{})
-		ints1 := plex.AddOut[int](q)
-		ints2 := plex.AddOut[int](q)
+		ints1 := chans.AddOut[int](q)
+		ints2 := chans.AddOut[int](q)
 
 		go func() {
 			results1 <- <-ints1
@@ -37,14 +37,14 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("RemoveOut", func(t *testing.T) {
-		var q plex.Demux[int]
+		var q chans.Demux[int]
 
 		q.Start()
 		// close the demux once done
 		defer q.Close()
 
 		results := make(chan interface{})
-		ints := plex.AddOut[int](q)
+		ints := chans.AddOut[int](q)
 
 		go func() {
 			results <- <-ints
@@ -70,13 +70,13 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("An unread output chan blocks all queue", func(t *testing.T) {
-		var q plex.Demux[int]
+		var q chans.Demux[int]
 
 		q.Start()
 
 		// this output will
 		// never be readed...
-		plex.AddOut[int](q)
+		chans.AddOut[int](q)
 
 		// this send doesn't block,
 		// but the start goroutine
@@ -98,12 +98,12 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("Send types with matching output doesn't block", func(t *testing.T) {
-		var q plex.Demux[any]
+		var q chans.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
 		go func() {
-			actions := plex.AddOut[int](q)
+			actions := chans.AddOut[int](q)
 			assert.Equal(t, 42, <-actions)
 			close(await)
 		}()
@@ -115,11 +115,11 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("RemoveOut on two types", func(t *testing.T) {
-		var q plex.Demux[any]
+		var q chans.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
-		actions := plex.AddOut2[int, float64](q)
+		actions := chans.AddOut2[int, float64](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -140,11 +140,11 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("RemoveOut on 3 types", func(t *testing.T) {
-		var q plex.Demux[any]
+		var q chans.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
-		actions := plex.AddOut3[int, float64, bool](q)
+		actions := chans.AddOut3[int, float64, bool](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -169,11 +169,11 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("AddOut2", func(t *testing.T) {
-		var q plex.Demux[any]
+		var q chans.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
-		actions := plex.AddOut2[int, float64](q)
+		actions := chans.AddOut2[int, float64](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -188,11 +188,11 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("AddOut3", func(t *testing.T) {
-		var q plex.Demux[any]
+		var q chans.Demux[any]
 
 		q.Start()
 		await := make(chan struct{})
-		actions := plex.AddOut3[int, float64, bool](q)
+		actions := chans.AddOut3[int, float64, bool](q)
 
 		go func() {
 			assert.Equal(t, 42, <-actions)
@@ -209,13 +209,13 @@ func TestDemux(t *testing.T) {
 	})
 
 	t.Run("Each channel receive its own types", func(t *testing.T) {
-		var q plex.Demux[any]
+		var q chans.Demux[any]
 
 		q.Start()
 		await := sync.WaitGroup{}
 		await.Add(2)
-		ints := plex.AddOut[int](q)
-		floats := plex.AddOut[float64](q)
+		ints := chans.AddOut[int](q)
+		floats := chans.AddOut[float64](q)
 
 		go func() {
 			assert.Equal(t, 42, <-ints)

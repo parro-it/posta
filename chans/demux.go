@@ -1,4 +1,4 @@
-package plex
+package chans
 
 // Demux reads data from an input
 // channel and ditributes it

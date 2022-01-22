@@ -1,4 +1,4 @@
-package plex
+package chans
 
 type addOut struct {
 	out output

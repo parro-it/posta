@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/config"
-	"github.com/parro-it/posta/plex"
 )
 
 type AppStarted struct{}
@@ -15,7 +15,7 @@ type AppStarted struct{}
 type Processor func(ctx context.Context) chan error
 
 type App struct {
-	Actions plex.Demux[any]
+	Actions chans.Demux[any]
 }
 
 var Instance App
@@ -34,7 +34,7 @@ func (a *App) Start(ctx context.Context, processors ...Processor) {
 
 	a.Actions.Start()
 
-	var errs plex.Mux[error]
+	var errs chans.Mux[error]
 	var cancels = make([]context.CancelFunc, len(processors))
 
 	for idx, start := range processors {
@@ -62,8 +62,8 @@ func PostAction(a any) {
 }
 
 func ListenAction[T any]() chan T {
-	return plex.AddOut[T](Instance.Actions)
+	return chans.AddOut[T](Instance.Actions)
 }
 func ListenAction2[T1 any, T2 any]() chan any {
-	return plex.AddOut2[T1, T2](Instance.Actions)
+	return chans.AddOut2[T1, T2](Instance.Actions)
 }

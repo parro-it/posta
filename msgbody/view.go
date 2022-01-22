@@ -75,20 +75,6 @@ func setFieldsOnAction(ch chan MsgSetAll, flds flds) {
 			flds.to.SetText(setMsg.To)
 			flds.cc.SetText(setMsg.CC)
 
-			/*parent := errs.Must(flds.atts.GetParent()).(*gtk.Viewport)
-			fld := errs.Must(gtk.ListBoxNew())
-			fld.SetHAlign(gtk.ALIGN_FILL)
-			fld.SetHExpand(true)
-			fld.SetMarginBottom(3)
-			fld.SetMarginStart(3)
-			fld.SetMarginTop(3)
-			fld.SetMarginEnd(3)
-
-			flds.atts.Destroy()
-			flds.atts = fld
-			fld.ShowAll()
-			parent.Add(fld)
-			*/
 			for {
 				row := flds.atts.GetRowAtIndex(0)
 				if row == nil {
@@ -143,14 +129,7 @@ func attachmentsCtrls() (*gtk.ScrolledWindow, *gtk.ListBox) {
 	fld.SetMarginStart(3)
 	fld.SetMarginTop(3)
 	fld.SetMarginEnd(3)
-	/*
-		lbl := errs.Must(gtk.LabelNew("File.txt"))
-		lbl.SetHAlign(gtk.ALIGN_START)
-		fld.Add(lbl)
-		lbl = errs.Must(gtk.LabelNew("File2.gif"))
-		lbl.SetHAlign(gtk.ALIGN_START)
-		fld.Add(lbl)
-	*/
+
 	return ctrls, fld
 }
 
