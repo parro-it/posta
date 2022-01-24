@@ -1,6 +1,8 @@
 package msgbody
 
 import (
+	"fmt"
+
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
@@ -52,6 +54,14 @@ func View() *gtk.Frame {
 
 	scroll := errs.Must(gtk.FrameNew(""))
 	scroll.Add(ctrls)
+
+	flds.subj.Connect("changed", func() {
+		fmt.Println(flds.subj.GetText())
+	})
+	//flds.from.
+	//flds.to.
+	//flds.cc.
+	//flds.body.
 
 	go setFieldsOnAction(
 		app.ListenAction[MsgSetAll](),
