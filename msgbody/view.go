@@ -105,6 +105,19 @@ func setFieldsOnAction(ch chan MsgSetAll, flds flds) {
 			flds.cc.SetEditable(setMsg.Editable)
 			flds.body.SetEditable(setMsg.Editable)
 
+			if !setMsg.Editable {
+				flds.subj.SetHasFrame(false)
+				flds.from.SetHasFrame(false)
+				flds.to.SetHasFrame(false)
+				flds.cc.SetHasFrame(false)
+				flds.body.SetBorderWidth(0)
+			} else {
+				flds.subj.SetHasFrame(true)
+				flds.from.SetHasFrame(true)
+				flds.to.SetHasFrame(true)
+				flds.cc.SetHasFrame(true)
+				flds.body.SetBorderWidth(1)
+			}
 			return false
 		})
 	}
