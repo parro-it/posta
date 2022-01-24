@@ -16,11 +16,12 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-message"
-	"golang.org/x/net/html"
 
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/config"
+
+	md "github.com/JohannesKaufmann/html-to-markdown"
 )
 
 // Account encapsulates a
@@ -163,37 +164,14 @@ func readText(r io.Reader) string {
 	return buf.String()
 }
 func readHMTL(r io.Reader) string {
-	z := html.NewTokenizer(r)
-	var buf bytes.Buffer
-	previousStartTokenTest := z.Token()
 
-	for {
-		tt := z.Next()
-		switch tt {
-		case html.ErrorToken:
-			if err := z.Err(); err != io.EOF {
-				panic(err)
-			}
-			return buf.String()
-		case html.StartTagToken:
-			previousStartTokenTest = z.Token()
-		case html.EndTagToken:
-			if tag := z.Token().Data; tag == "p" || tag == "h1" || tag == "h2" || tag == "h3" || tag == "h4" || tag == "h5" || tag == "h6" || tag == "div" {
-				buf.WriteRune('\n')
-			}
-		case html.SelfClosingTagToken:
-			if z.Token().Data == "br" {
-				buf.WriteRune('\n')
-			}
-		case html.TextToken:
-			if previousStartTokenTest.Data == "script" || previousStartTokenTest.Data == "style" {
-				continue
-			}
-			s := strings.TrimSpace(html.UnescapeString(string(z.Text())))
-			buf.WriteString(s)
-		}
+	converter := md.NewConverter("", true, nil)
+
+	markdown, err := converter.ConvertReader(r)
+	if err != nil {
+		log.Fatal(err)
 	}
-
+	return markdown.String()
 }
 
 func (acc *Account) Login() *Result[struct{}] {
