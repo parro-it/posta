@@ -4,7 +4,6 @@
 package imap
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -20,6 +19,7 @@ import (
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/config"
+	"github.com/parro-it/posta/errs"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 )
@@ -75,6 +75,68 @@ type Result[T any] struct {
 	Err error
 }
 
+type bodyStructure struct {
+	textContent []byte
+	htmlContent []byte
+	charset     string
+	Attachments []Attachment
+}
+
+func fetchBodyStructure(m *message.Entity) bodyStructure {
+	var bs bodyStructure
+	mr := m.MultipartReader()
+	if mr == nil {
+		// non MIME mail
+		t, params, err := m.Header.ContentType()
+		if err != nil {
+			log.Fatal(err)
+		}
+		bs.charset = params["charset"]
+		if t == "text/plain" {
+			bs.textContent = errs.Must(io.ReadAll(m.Body))
+		} else if t == "text/html" {
+			bs.htmlContent = errs.Must(io.ReadAll(m.Body))
+		}
+		return bs
+	}
+
+	for {
+		p, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Fatal(err)
+		}
+
+		t, typeParams, err := p.Header.ContentType()
+		if err != nil {
+			fmt.Println(err)
+		}
+		disp, params, err := p.Header.ContentDisposition()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if disp == "attachment" {
+			att := Attachment{
+				Name:   params["filename"],
+				reader: p.Body,
+			}
+			bs.Attachments = append(bs.Attachments, att)
+			continue
+		}
+		if t == "text/plain" {
+			bs.charset = typeParams["charset"]
+			bs.textContent = errs.Must(io.ReadAll(p.Body))
+		} else if t == "text/html" {
+			bs.charset = typeParams["charset"]
+			bs.htmlContent = errs.Must(io.ReadAll(p.Body))
+		}
+
+	}
+	return bs
+}
+
 func (acc *Account) FetchBody(msg *Msg) error {
 
 	var err error
@@ -103,75 +165,33 @@ func (acc *Account) FetchBody(msg *Msg) error {
 	m, err := message.Read(r)
 	if message.IsUnknownCharset(err) {
 		// This error is not fatal
-		log.Println("Unknown encoding:", err)
+		log.Println("Unknown charset:", err)
 	} else if err != nil {
 		log.Fatal(err)
 	}
-	var s string
-	msg.Attachments = []Attachment{}
-	if mr := m.MultipartReader(); mr != nil {
-		// This is a multipart message
-		s = "This is a multipart message containing:\n"
-		for {
-			p, err := mr.NextPart()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				log.Fatal(err)
-			}
-
-			disp, params, err := p.Header.ContentDisposition()
-			if disp == "attachment" {
-				att := Attachment{
-					Name:   params["filename"],
-					reader: p.Body,
-				}
-				msg.Attachments = append(msg.Attachments, att)
-				continue
-			}
-
-			t, _, _ := p.Header.ContentType()
-			if t == "text/plain" {
-				s = readText(p.Body)
-				break
-			} else if t == "text/html" {
-				s = readHMTL(p.Body)
-				break
-			}
-			s += fmt.Sprintf("\t- A part with type %s \n", t)
-		}
-	} else {
-		t, _, _ := m.Header.ContentType()
-		if t == "text/plain" {
-			s = readText(m.Body)
-		} else if t == "text/html" {
-			s = readHMTL(m.Body)
-		} else {
-			s = fmt.Sprintf("This is a non-multipart message with type %s \n", t)
-		}
+	bs := fetchBodyStructure(m)
+	msg.Attachments = bs.Attachments
+	if bs.textContent != nil {
+		msg.Body = readText(bs.textContent, bs.charset)
+	} else if bs.htmlContent != nil {
+		msg.Body = readHMTL(bs.htmlContent)
 	}
 
-	msg.Body = s
 	return nil
 }
 
-func readText(r io.Reader) string {
-	var buf bytes.Buffer
-	_, err := io.Copy(&buf, r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return buf.String()
+func readText(r []byte, charset string) string {
+	return string(r)
 }
-func readHMTL(r io.Reader) string {
+func readHMTL(r []byte) string {
 
 	converter := md.NewConverter("", true, nil)
 
-	markdown, err := converter.ConvertReader(r)
+	markdown, err := converter.ConvertBytes(r)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return markdown.String()
+	return string(markdown)
 }
 
 func (acc *Account) Login() *Result[struct{}] {
