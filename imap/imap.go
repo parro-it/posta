@@ -259,34 +259,43 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 	res := Result[Msg]{
 		Res: make(chan Msg),
 	}
-	ch := make(chan *imap.Message)
+	msgChan := make(chan *imap.Message)
 
 	go func() {
 		var mbox *imap.MailboxStatus
 
 		if mbox, res.Err = acc.client.Select(folder.Path, true); res.Err != nil {
-			close(ch)
+			close(msgChan)
 			return
 		}
 
 		if mbox.Messages == 0 {
-			close(ch)
+			close(msgChan)
 			return
 		}
+		var chunkSz uint32 = 50
+		var out = chans.SimpleMux[*imap.Message]{Output: msgChan}
 
-		seqset := new(imap.SeqSet)
-		seqset.AddRange(1, mbox.Messages)
+		for i := uint32(1); i <= mbox.Messages; i += chunkSz {
+			seqset := new(imap.SeqSet)
+			seqset.AddRange(i, i+chunkSz-1)
 
-		// Get the whole message body
-		items := []imap.FetchItem{imap.FetchEnvelope}
-		res.Err = acc.client.Fetch(seqset, items, ch)
+			// Get the whole message body
+			items := []imap.FetchItem{imap.FetchEnvelope}
+			ch := make(chan *imap.Message)
+			out.AddInputFrom(ch)
+			if res.Err = acc.client.Fetch(seqset, items, ch); res.Err != nil {
+				break
+			}
+		}
+
 	}()
 
 	go func() {
 		defer close(res.Res)
 		//dec := new(mime.WordDecoder)
 
-		for msg := range ch {
+		for msg := range msgChan {
 
 			/*r := msg.GetBody(&section)
 			if r == nil {

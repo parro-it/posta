@@ -10,6 +10,20 @@ type Mux[T any] struct {
 	inputCount int
 }
 
+type SimpleMux[T any] struct {
+	Output chan T
+}
+
+func (q *SimpleMux[T]) AddInputFrom(in chan T) {
+	if q.Output == nil {
+		q.Output = make(chan T)
+	}
+	go func() {
+		for v := range in {
+			q.Output <- v
+		}
+	}()
+}
 func (q *Mux[T]) AddInputFrom(in chan T) {
 	if q.Output == nil {
 		q.Output = make(chan Out[T])
