@@ -15,9 +15,18 @@ var Version string = "development"
 // Type contains the app configuration.
 // It is read from the file specified
 type Type struct {
-	ConfigFile string
-	Showver    bool
-	Accounts   []Account
+	ConfigFile  string
+	Showver     bool
+	Accounts    []Account
+	SMTPServers []SMTPServer
+}
+
+type SMTPServer struct {
+	Addr     string
+	User     string
+	Pass     string
+	Name     string
+	StartTLS bool
 }
 
 type Account struct {
@@ -26,6 +35,7 @@ type Account struct {
 	Pass     string
 	Name     string
 	StartTLS bool
+	SMTPName string
 }
 
 // Values contains the configuration as read from the toml file.

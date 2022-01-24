@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/config"
 )
@@ -15,7 +16,14 @@ type AppStarted struct{}
 type Processor func(ctx context.Context) chan error
 
 type App struct {
-	Actions chans.Demux[any]
+	actions   chans.Demux[any]
+	shortcuts map[uint64]Shortcut
+}
+
+type Shortcut func() error
+
+func (a *App) RegisterShortcut(key uint32, state uint32, exec Shortcut) {
+	a.shortcuts[uint64(key)|uint64(state)<<32] = exec
 }
 
 var Instance App
@@ -30,9 +38,22 @@ func (a *App) PostKeyPressed(key uint, state uint) {
 		Key:   key,
 		State: state,
 	})
+	for _, mask := range []uint{gdk.CONTROL_MASK, gdk.META_MASK, uint(gdk.SHIFT_MASK)} {
+		if state&mask == mask {
+			if sh, ok := a.shortcuts[uint64(key)|uint64(mask)<<32]; ok {
+				err := sh()
+				if err != nil {
+					panic(err)
+				}
+				break
+			}
+		}
+	}
+
 }
 
 func (a *App) Start(ctx context.Context, processors ...Processor) {
+	a.shortcuts = map[uint64]Shortcut{}
 	cfgpath, fail := config.GetCfgPath()
 	if fail {
 		return
@@ -44,7 +65,7 @@ func (a *App) Start(ctx context.Context, processors ...Processor) {
 		log.Fatal(err)
 	}
 
-	a.Actions.Start()
+	a.actions.Start()
 
 	var errs chans.Mux[error]
 	var cancels = make([]context.CancelFunc, len(processors))
@@ -66,16 +87,16 @@ func (a *App) Start(ctx context.Context, processors ...Processor) {
 			errs.AddInputFrom(proc(procCtx))
 		}
 	}()
-	a.Actions.Input <- AppStarted{}
+	a.actions.Input <- AppStarted{}
 }
 
 func PostAction(a any) {
-	Instance.Actions.Input <- a
+	Instance.actions.Input <- a
 }
 
 func ListenAction[T any]() chan T {
-	return chans.AddOut[T](Instance.Actions)
+	return chans.AddOut[T](Instance.actions)
 }
 func ListenAction2[T1 any, T2 any]() chan any {
-	return chans.AddOut2[T1, T2](Instance.Actions)
+	return chans.AddOut2[T1, T2](Instance.actions)
 }

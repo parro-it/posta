@@ -32,7 +32,21 @@ func Start(ctx context.Context) chan error {
 				Editable:    editable,
 			})
 		}
-
+		app.Instance.RegisterShortcut(uint32(gdk.KEY_n), gdk.CONTROL_MASK, func() error {
+			curmsg = &imap.Msg{
+				Date:    time.Now(),
+				From:    []string{config.Values.Accounts[0].User},
+				To:      []string{},
+				CC:      []string{},
+				Subject: "",
+				Body:    "",
+				Account: config.Values.Accounts[0].Name,
+				//Folder:      &imap.Folder{},
+				Attachments: []imap.Attachment{},
+			}
+			setFields(true)
+			return nil
+		})
 		for a := range chans.WithContext(ctx, actions) {
 			switch action := a.(type) {
 			case AttachmentsAdded:
@@ -68,21 +82,7 @@ func Start(ctx context.Context) chan error {
 				}
 				curmsg.CC = flds
 			case app.KeyPressed:
-				if action.Key == gdk.KEY_n && action.State&gdk.CONTROL_MASK == gdk.CONTROL_MASK {
-					curmsg = &imap.Msg{
-						Date:    time.Now(),
-						From:    []string{config.Values.Accounts[0].User},
-						To:      []string{},
-						CC:      []string{},
-						Subject: "",
-						Body:    "",
-						Account: config.Values.Accounts[0].Name,
-						//Folder:      &imap.Folder{},
-						Attachments: []imap.Attachment{},
-					}
-					setFields(true)
 
-				}
 			case msgs.MsgSelect:
 				curmsg = action.Msg
 				c, err := imap.AccountByName(curmsg.Account)
