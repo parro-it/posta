@@ -89,6 +89,12 @@ func setFieldsOnAction(ch chan MsgSetAll, flds flds) {
 				flds.atts.Add(lbl)
 			}
 
+			flds.subj.SetEditable(setMsg.Editable)
+			flds.from.SetEditable(setMsg.Editable)
+			flds.to.SetEditable(setMsg.Editable)
+			flds.cc.SetEditable(setMsg.Editable)
+			flds.body.SetEditable(setMsg.Editable)
+
 			return false
 		})
 	}

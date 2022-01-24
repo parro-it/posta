@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/parro-it/posta/app"
 	"github.com/parro-it/posta/folders"
@@ -49,7 +50,12 @@ func mainWindow() *gtk.Window {
 	horzCnt2.SetPosition(1000)
 	horzCnt1.SetWideHandle(true)
 	win.Add(horzCnt1)
+	win.Connect("key-press-event", func(win *gtk.Window, ev *gdk.Event) {
+		keyEvent := &gdk.EventKey{Event: ev}
 
+		app.Instance.PostKeyPressed(keyEvent.KeyVal(), keyEvent.State())
+
+	})
 	return win
 }
 

@@ -20,6 +20,18 @@ type App struct {
 
 var Instance App
 
+type KeyPressed struct {
+	Key   uint
+	State uint
+}
+
+func (a *App) PostKeyPressed(key uint, state uint) {
+	PostAction(KeyPressed{
+		Key:   key,
+		State: state,
+	})
+}
+
 func (a *App) Start(ctx context.Context, processors ...Processor) {
 	cfgpath, fail := config.GetCfgPath()
 	if fail {
