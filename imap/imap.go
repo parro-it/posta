@@ -5,6 +5,7 @@ package imap
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/mail"
@@ -159,12 +160,40 @@ func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result
 	res := errs.Result[Msg]{
 		Res: make(chan Msg),
 	}
+	// this function implements
+	// two goroutines that communicate through
+	// `msgChan`: the first one produces *imap.Message
+	// using a list of chunked Fetch calls.
+	// The second goroutine reads these imap.Message
+	// from the channel, transform them in Msg
+	// and send the Msg to result channel.
 	msgChan := make(chan *imap.Message)
+	var chunkSz uint32 = 50
+	var mbox *imap.MailboxStatus
+	c := BorrowClient(acc.Cfg.Name)
+
+	// this function fetch a chunk of messages using
+	// Fetch imap command, sending them to an out chan
+	// chunkSeq is the sequence number of the chunk, starting with 0
+	// out is the output channel.
+	// The function closes out chan when it has done sending all msgs
+	fetchChunk := func(chunkSeq uint32, out chan *imap.Message) {
+		seqset := new(imap.SeqSet)
+		start := chunkSeq*chunkSz + 1
+		stop := (chunkSeq + 1) * chunkSz
+		if stop > mbox.Messages {
+			stop = mbox.Messages
+		}
+		seqset.AddRange(start, stop)
+
+		// Get the whole message body
+		items := []imap.FetchItem{imap.FetchEnvelope}
+		res.Err = c.Fetch(seqset, items, out)
+	}
 
 	go func() {
-		var mbox *imap.MailboxStatus
-		c := BorrowClient(acc.Cfg.Name)
 		defer c.Done()
+
 		if mbox, res.Err = c.Select(folder.Path, true); res.Err != nil {
 			close(msgChan)
 			return
@@ -174,27 +203,25 @@ func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result
 			close(msgChan)
 			return
 		}
-		var chunkSz uint32 = 50
-		var out = chans.SimpleMux[*imap.Message]{Output: msgChan}
-
+		var mux = chans.SimpleMux[*imap.Message]{Output: msgChan}
+		defer mux.Close()
 		for i := uint32(0); i <= mbox.Messages/chunkSz; i++ {
-			seqset := new(imap.SeqSet)
-			start := i*chunkSz + 1
-			stop := (i + 1) * chunkSz
-			if stop > mbox.Messages {
-				stop = mbox.Messages
-			}
-			seqset.AddRange(start, stop)
-
-			// Get the whole message body
-			items := []imap.FetchItem{imap.FetchEnvelope}
 			ch := make(chan *imap.Message)
-			out.AddInputFrom(ch)
-			if res.Err = c.Fetch(seqset, items, ch); res.Err != nil {
-				break
+			mux.AddInputFrom(ch)
+
+			fetchChunk(i, ch)
+			if res.Err != nil {
+				return
+			}
+
+			select {
+			case <-ctx.Done():
+				fmt.Printf("ListMessages on folder `%s` canceled.\n", folder.Path)
+				return
+			default:
+				continue
 			}
 		}
-		out.Close()
 
 	}()
 

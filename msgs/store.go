@@ -30,7 +30,7 @@ func NewStore() *gtk.TreeStore {
 	store.SetSortFunc(COLUMN_DATE, func(model *gtk.TreeModel, a, b *gtk.TreeIter) int {
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error sorting date: %s\n", err)
 			}
 		}()
 		av, err := model.GetValue(a, COLUMN_DATE)
@@ -89,7 +89,7 @@ func NewStore() *gtk.TreeStore {
 
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error sorting date: %s\n", err)
 			}
 		}()
 
@@ -130,7 +130,7 @@ func NewStore() *gtk.TreeStore {
 	store.SetSortFunc(COLUMN_SUBJECT, func(model *gtk.TreeModel, a, b *gtk.TreeIter) int {
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error sorting date: %s\n", err)
 			}
 		}()
 

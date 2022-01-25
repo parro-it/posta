@@ -49,7 +49,9 @@ func Start(ctx context.Context) chan error {
 				g.Go(listClientFolder(ctx, account, false))
 			}
 		}
-		errs <- g.Wait()
+		if err := g.Wait(); err != nil {
+			errs <- err
+		}
 	}()
 	return errs
 }

@@ -79,7 +79,7 @@ func (a *App) Start(ctx context.Context, processors ...Processor) {
 		for err := range errs.Output {
 			proc := processors[err.Idx]
 			cancelCtx := cancels[err.Idx]
-			fmt.Fprintf(os.Stderr, "An error occurred in processor %v: %s. Processor will be restarted.", proc, err.Value)
+			fmt.Fprintf(os.Stderr, "An error occurred in processor %v: %s. Processor will be restarted.", proc, err.Value.Error())
 			cancelCtx()
 
 			var procCtx context.Context
