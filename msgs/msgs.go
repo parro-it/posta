@@ -33,7 +33,7 @@ func Start(ctx context.Context) chan error {
 				continue
 			}
 
-			msgs := c.ListMessages(imap.Folder{Path: fold.Folder.Path, Account: fold.Folder.Account})
+			msgs := c.ListMessages(ctx, imap.Folder{Path: fold.Folder.Path, Account: fold.Folder.Account})
 			for msg := range chans.ChunksSplit(msgs.Res, 50) {
 				app.PostAction(AddMsg{Msgs: msg})
 			}

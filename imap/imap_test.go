@@ -1,6 +1,7 @@
 package imap
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -32,7 +33,7 @@ func TestListFolders(t *testing.T) {
 	//res := a.Login()
 	//<-res.Res
 	//require.NoError(t, res.Err)
-	fold := a.ListFolders()
+	fold := a.ListFolders(context.Background())
 	arr := chans.Collect(fold.Res)
 	require.NoError(t, fold.Err)
 	for i := range arr {
@@ -52,7 +53,7 @@ func TestListMessages(t *testing.T) {
 	//res := a.Login()
 	//<-res.Res
 	//require.NoError(t, res.Err)
-	fold := a.ListFolders()
+	fold := a.ListFolders(context.Background())
 	var inbox Folder
 	for fo := range fold.Res {
 		if fo.Name == "INBOX" {
@@ -62,7 +63,7 @@ func TestListMessages(t *testing.T) {
 	}
 	require.NoError(t, fold.Err)
 
-	mes := a.ListMessages(inbox)
+	mes := a.ListMessages(context.Background(), inbox)
 	msgs := chans.Collect(mes.Res)
 	require.NoError(t, mes.Err)
 	/*for i := range arr {

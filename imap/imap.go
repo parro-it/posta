@@ -4,6 +4,7 @@
 package imap
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/mail"
@@ -56,12 +57,7 @@ type Attachment struct {
 	Name   string
 }
 
-type Result[T any] struct {
-	Res chan T
-	Err error
-}
-
-func (acc *Account) FetchBody(msg *Msg) error {
+func (acc *Account) FetchBody(ctx context.Context, msg *Msg) error {
 	c := BorrowClient(acc.Cfg.Name)
 	defer c.Done()
 
@@ -78,21 +74,23 @@ func (acc *Account) FetchBody(msg *Msg) error {
 
 	items := []imap.FetchItem{section.FetchItem()}
 	var ch chan *imap.Message
-	for {
-		ch = make(chan *imap.Message, 1)
-
+	//for {
+	ch = make(chan *imap.Message, 1)
+	/*
 		err = c.Fetch(seqset, items, ch)
-		if err == nil {
-			break
-		}
-		if err.Error() == "short write" {
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
+			if err == nil {
+				break
+			}
+			if err.Error() == "short write" {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
 
+			return err
+		}*/
+	if err = c.Fetch(seqset, items, ch); err != nil {
 		return err
 	}
-
 	res := <-ch
 	/*s, err := json.MarshalIndent(res.BodyStructure, "  ", "  ")
 	if err != nil {
@@ -122,24 +120,8 @@ func (acc *Account) FetchBody(msg *Msg) error {
 	return nil
 }
 
-/*
-func (acc *Account) Login() *Result[struct{}] {
-	res := Result[struct{}]{
-		Res: make(chan struct{}),
-	}
-	go func() {
-		c := BorrowClient(acc.Cfg.Name)
-		defer close(res.Res)
-		defer c.Done()
-		res.Err = c.Login(acc.Cfg.User, acc.Cfg.Pass)
-
-	}()
-
-	return &res
-}
-*/
-func (acc *Account) ListFolders() *Result[Folder] {
-	res := Result[Folder]{
+func (acc *Account) ListFolders(ctx context.Context) errs.Result[Folder] {
+	res := errs.Result[Folder]{
 		Res: make(chan Folder),
 	}
 	c := BorrowClient(acc.Cfg.Name)
@@ -170,11 +152,11 @@ func (acc *Account) ListFolders() *Result[Folder] {
 			}
 		}
 	}()
-	return &res
+	return res
 }
 
-func (acc *Account) ListMessages(folder Folder) Result[Msg] {
-	res := Result[Msg]{
+func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result[Msg] {
+	res := errs.Result[Msg]{
 		Res: make(chan Msg),
 	}
 	msgChan := make(chan *imap.Message)
@@ -218,37 +200,29 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 
 	go func() {
 		defer close(res.Res)
-		//dec := new(mime.WordDecoder)
 
 		for msg := range msgChan {
-
-			/*r := msg.GetBody(&section)
-			if r == nil {
-				log.Println("Server didn't returned message body")
-				continue
-			}*/
-			en := msg.Envelope
-
-			out := Msg{
-				Uid:     msg.SeqNum,
-				Account: acc.Cfg.Name,
-				Folder:  &folder,
-				Date:    en.Date,
-				Subject: en.Subject,
-			}
-
-			/*fd, err := dec.Decode(out.From)
-			if err == nil {
-				out.From = fd
-			}*/
-			out.From = formatAddresses(en.From)
-			out.To = formatAddresses(en.To)
-			out.CC = formatAddresses(en.Cc)
-
-			res.Res <- out
+			res.Res <- msgFromImap(msg, acc, folder)
 		}
 	}()
 	return res
+}
+
+func msgFromImap(msg *imap.Message, acc *Account, folder Folder) Msg {
+	en := msg.Envelope
+
+	out := Msg{
+		Uid:     msg.SeqNum,
+		Account: acc.Cfg.Name,
+		Folder:  &folder,
+		Date:    en.Date,
+		Subject: en.Subject,
+	}
+	out.From = formatAddresses(en.From)
+	out.To = formatAddresses(en.To)
+	out.CC = formatAddresses(en.Cc)
+
+	return out
 }
 
 type bodyStructure struct {

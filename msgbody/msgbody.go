@@ -89,7 +89,7 @@ func Start(ctx context.Context) chan error {
 				if err != nil {
 					panic(err)
 				}
-				err = c.FetchBody(curmsg)
+				err = c.FetchBody(ctx, curmsg)
 				if err != nil {
 					panic(err)
 				}

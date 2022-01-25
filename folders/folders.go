@@ -5,6 +5,7 @@ import (
 
 	"github.com/emersion/go-imap/client"
 	"github.com/parro-it/posta/app"
+	"github.com/parro-it/posta/chans"
 	"github.com/parro-it/posta/config"
 	"github.com/parro-it/posta/imap"
 	"golang.org/x/sync/errgroup"
@@ -43,21 +44,22 @@ func Start(ctx context.Context) chan error {
 
 		for i, account := range config.Values.Accounts {
 			if i == 1 {
-				g.Go(listClientFolder(account, true))
+				g.Go(listClientFolder(ctx, account, true))
 			} else {
-				g.Go(listClientFolder(account, false))
+				g.Go(listClientFolder(ctx, account, false))
 			}
 		}
+		errs <- g.Wait()
 	}()
 	return errs
 }
 
-func listClientFolder(account config.Account, selFirstFolder bool) func() error {
+func listClientFolder(ctx context.Context, account config.Account, selFirstFolder bool) func() error {
 	return func() (err error) {
 
 		c, err := imap.AccountByName(account.Name)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		//res := c.Login()
 		//<-res.Res
@@ -65,8 +67,8 @@ func listClientFolder(account config.Account, selFirstFolder bool) func() error 
 		//	panic(res.Err)
 		//}
 
-		lf := c.ListFolders()
-		for f := range lf.Res {
+		lf := c.ListFolders(ctx)
+		for f := range chans.WithContext(ctx, lf.Res) {
 
 			app.PostAction(Added{Folder: f})
 
