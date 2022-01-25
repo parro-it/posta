@@ -14,11 +14,11 @@ import (
 )
 
 func Start(ctx context.Context) chan error {
-	res := make(chan error)
+	errs := make(chan error)
 	actions := app.ListenAction2[msgs.MsgSelect, app.KeyPressed]()
 
 	go func() {
-		defer close(res)
+		defer close(errs)
 		var curmsg *imap.Msg
 
 		setFields := func(editable bool) {
@@ -93,12 +93,11 @@ func Start(ctx context.Context) chan error {
 				if err != nil {
 					panic(err)
 				}
-
 				setFields(false)
 			}
 		}
 	}()
-	return res
+	return errs
 }
 
 type MsgSetAll struct {

@@ -23,7 +23,6 @@ func Start(ctx context.Context) chan error {
 	selectedFolders := app.ListenAction[folders.Select]()
 
 	go func() {
-		defer close(res)
 
 		for fold := range chans.WithContext(ctx, selectedFolders) {
 			app.PostAction(ClearMsgs{})

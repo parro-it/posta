@@ -82,22 +82,28 @@ type bodyStructure struct {
 	Attachments []Attachment
 }
 
-func fetchBodyStructure(m *message.Entity) bodyStructure {
+func fetchBodyStructure(m *message.Entity) (bodyStructure, error) {
 	var bs bodyStructure
 	mr := m.MultipartReader()
 	if mr == nil {
 		// non MIME mail
 		t, params, err := m.Header.ContentType()
 		if err != nil {
-			log.Fatal(err)
+			return bs, err
 		}
 		bs.charset = params["charset"]
 		if t == "text/plain" {
-			bs.textContent = errs.Must(io.ReadAll(m.Body))
+			bs.textContent, err = io.ReadAll(m.Body)
+			if err != nil {
+				return bs, err
+			}
 		} else if t == "text/html" {
-			bs.htmlContent = errs.Must(io.ReadAll(m.Body))
+			bs.htmlContent, err = io.ReadAll(m.Body)
+			if err != nil {
+				return bs, err
+			}
 		}
-		return bs
+		return bs, nil
 	}
 
 	for {
@@ -105,16 +111,16 @@ func fetchBodyStructure(m *message.Entity) bodyStructure {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatal(err)
+			return bs, err
 		}
 
 		t, typeParams, err := p.Header.ContentType()
 		if err != nil {
-			fmt.Println(err)
+			return bs, err
 		}
 		disp, params, err := p.Header.ContentDisposition()
-		if err != nil {
-			fmt.Println(err)
+		if err != nil && err.Error() != "mime: no media type" {
+			return bs, err
 		}
 
 		if disp == "attachment" {
@@ -134,7 +140,7 @@ func fetchBodyStructure(m *message.Entity) bodyStructure {
 		}
 
 	}
-	return bs
+	return bs, nil
 }
 
 func (acc *Account) FetchBody(msg *Msg) error {
@@ -151,8 +157,19 @@ func (acc *Account) FetchBody(msg *Msg) error {
 	var section imap.BodySectionName
 
 	items := []imap.FetchItem{section.FetchItem()}
-	ch := make(chan *imap.Message, 1)
-	if err = acc.client.Fetch(seqset, items, ch); err != nil {
+	var ch chan *imap.Message
+	for {
+		ch = make(chan *imap.Message, 1)
+
+		err = acc.client.Fetch(seqset, items, ch)
+		if err == nil {
+			break
+		}
+		if err.Error() == "short write" {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
 		return err
 	}
 
@@ -167,14 +184,19 @@ func (acc *Account) FetchBody(msg *Msg) error {
 		// This error is not fatal
 		log.Println("Unknown charset:", err)
 	} else if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	bs := fetchBodyStructure(m)
+	bs, err := fetchBodyStructure(m)
+	if err != nil {
+		return err
+	}
+
 	msg.Attachments = bs.Attachments
 	if bs.textContent != nil {
 		msg.Body = readText(bs.textContent, bs.charset)
 	} else if bs.htmlContent != nil {
-		msg.Body = readHMTL(bs.htmlContent)
+		msg.Body, err = readHMTL(bs.htmlContent)
+		return err
 	}
 
 	return nil
@@ -183,15 +205,15 @@ func (acc *Account) FetchBody(msg *Msg) error {
 func readText(r []byte, charset string) string {
 	return string(r)
 }
-func readHMTL(r []byte) string {
+func readHMTL(r []byte) (string, error) {
 
 	converter := md.NewConverter("", true, nil)
 
 	markdown, err := converter.ConvertBytes(r)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
-	return string(markdown)
+	return string(markdown), nil
 }
 
 func (acc *Account) Login() *Result[struct{}] {
@@ -276,9 +298,14 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 		var chunkSz uint32 = 50
 		var out = chans.SimpleMux[*imap.Message]{Output: msgChan}
 
-		for i := uint32(1); i <= mbox.Messages; i += chunkSz {
+		for i := uint32(0); i <= mbox.Messages/chunkSz; i++ {
 			seqset := new(imap.SeqSet)
-			seqset.AddRange(i, i+chunkSz-1)
+			start := i*chunkSz + 1
+			stop := (i + 1) * chunkSz
+			if stop > mbox.Messages {
+				stop = mbox.Messages
+			}
+			seqset.AddRange(start, stop)
 
 			// Get the whole message body
 			items := []imap.FetchItem{imap.FetchEnvelope}
@@ -288,6 +315,7 @@ func (acc *Account) ListMessages(folder Folder) Result[Msg] {
 				break
 			}
 		}
+		out.Close()
 
 	}()
 

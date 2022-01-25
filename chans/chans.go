@@ -34,24 +34,29 @@ func ChunksSplit[T any](ch chan T, chunkSz int) chan []T {
 	}
 	res := make(chan []T)
 	go func() {
+		var v T
 		for {
 			chunk := []T{}
-			var v T
 			isOpen := true
-			for i := 0; isOpen && i < chunkSz; i++ {
-				v, isOpen = <-ch
-				if !isOpen {
+			for i := 0; i < chunkSz; i++ {
+				if v, isOpen = <-ch; isOpen {
+					chunk = append(chunk, v)
+				} else {
 					break
 				}
-
-				chunk = append(chunk, v)
 			}
-			res <- chunk
+			/*if len(chunk) < chunkSz {
+				runtime.Breakpoint()
+			}*/
+			if len(chunk) > 0 {
+				res <- chunk
+			}
 			if !isOpen {
 				break
 			}
 
 		}
+		close(res)
 	}()
 	return res
 }

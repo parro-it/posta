@@ -210,6 +210,7 @@ func handleActions(a any, store *gtk.TreeStore) {
 				log.Fatal("Unable set value:", err)
 			}
 			id := len(mails)
+			m := m
 			mails[id] = &m
 			if err := store.SetValue(msg, COLUMN_OBJ, id); err != nil {
 				log.Fatal("Unable set obj value:", err)
