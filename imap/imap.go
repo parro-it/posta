@@ -157,9 +157,7 @@ func (acc *Account) ListFolders(ctx context.Context) errs.Result[Folder] {
 }
 
 func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result[Msg] {
-	res := errs.Result[Msg]{
-		Res: make(chan Msg),
-	}
+	res := errs.NewResult[Msg]()
 	// this function implements
 	// two goroutines that communicate through
 	// `msgChan`: the first one produces *imap.Message
