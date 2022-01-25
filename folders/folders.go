@@ -59,11 +59,11 @@ func listClientFolder(account config.Account, selFirstFolder bool) func() error 
 		if err != nil {
 			panic(err)
 		}
-		res := c.Login()
-		<-res.Res
-		if res.Err != nil {
-			panic(res.Err)
-		}
+		//res := c.Login()
+		//<-res.Res
+		//if res.Err != nil {
+		//	panic(res.Err)
+		//}
 
 		lf := c.ListFolders()
 		for f := range lf.Res {

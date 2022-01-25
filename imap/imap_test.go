@@ -18,20 +18,20 @@ var a = Account{
 		Name:     "test mailbox",
 		StartTLS: true,
 	},
-	client: nil,
 }
 
+/*
 func TestLogin(t *testing.T) {
 
 	res := a.Login()
 	<-res.Res
 	assert.NoError(t, res.Err)
 }
-
+*/
 func TestListFolders(t *testing.T) {
-	res := a.Login()
-	<-res.Res
-	require.NoError(t, res.Err)
+	//res := a.Login()
+	//<-res.Res
+	//require.NoError(t, res.Err)
 	fold := a.ListFolders()
 	arr := chans.Collect(fold.Res)
 	require.NoError(t, fold.Err)
@@ -49,9 +49,9 @@ func TestListFolders(t *testing.T) {
 
 }
 func TestListMessages(t *testing.T) {
-	res := a.Login()
-	<-res.Res
-	require.NoError(t, res.Err)
+	//res := a.Login()
+	//<-res.Res
+	//require.NoError(t, res.Err)
 	fold := a.ListFolders()
 	var inbox Folder
 	for fo := range fold.Res {
