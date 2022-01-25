@@ -193,26 +193,28 @@ func handleActions(a any, store *gtk.TreeStore) {
 		mails = map[int]*imap.Msg{}
 		store.Clear()
 	case AddMsg:
-		m := a.Msg
-		msg := store.Append(nil)
 
-		if err := store.SetValue(msg, COLUMN_SUBJECT, m.Subject); err != nil {
-			log.Fatal("Unable set value:", err)
-		}
+		for _, m := range a.Msgs {
 
-		if err := store.SetValue(msg, COLUMN_DATE, m.Date.Format(dtFormat)); err != nil {
-			log.Fatal("Unable set value:", err)
-		}
+			msg := store.Append(nil)
 
-		if err := store.SetValue(msg, COLUMN_FROM, strings.Join(m.From, "; ")); err != nil {
-			log.Fatal("Unable set value:", err)
-		}
-		id := len(mails)
-		mails[id] = &m
-		if err := store.SetValue(msg, COLUMN_OBJ, id); err != nil {
-			log.Fatal("Unable set obj value:", err)
-		}
+			if err := store.SetValue(msg, COLUMN_SUBJECT, m.Subject); err != nil {
+				log.Fatal("Unable set value:", err)
+			}
 
+			if err := store.SetValue(msg, COLUMN_DATE, m.Date.Format(dtFormat)); err != nil {
+				log.Fatal("Unable set value:", err)
+			}
+
+			if err := store.SetValue(msg, COLUMN_FROM, strings.Join(m.From, "; ")); err != nil {
+				log.Fatal("Unable set value:", err)
+			}
+			id := len(mails)
+			mails[id] = &m
+			if err := store.SetValue(msg, COLUMN_OBJ, id); err != nil {
+				log.Fatal("Unable set obj value:", err)
+			}
+		}
 		/*
 			if err := store.SetValue(msg, COLUMN_TO, m.To); err != nil {
 				log.Fatal("Unable set value:", err)

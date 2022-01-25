@@ -12,7 +12,7 @@ import (
 )
 
 type AddMsg struct {
-	Msg imap.Msg
+	Msgs []imap.Msg
 }
 
 type ClearMsgs struct {
@@ -35,8 +35,8 @@ func Start(ctx context.Context) chan error {
 			}
 
 			msgs := c.ListMessages(imap.Folder{Path: fold.Folder.Path, Account: fold.Folder.Account})
-			for msg := range msgs.Res {
-				app.PostAction(AddMsg{Msg: msg})
+			for msg := range chans.ChunksSplit(msgs.Res, 50) {
+				app.PostAction(AddMsg{Msgs: msg})
 			}
 
 			if msgs.Err != nil {

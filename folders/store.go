@@ -47,7 +47,7 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 			account = store.Append(nil)
 			folders[a.Folder.Account] = account
 
-			err := store.SetValue(account, COLUMN_ICON, imageFolder)
+			err := store.SetValue(account, COLUMN_ICON, imageAccount)
 			if err != nil {
 				log.Fatal("Unable set value:", err)
 			}
@@ -93,7 +93,8 @@ func handleActions(a any, store *gtk.TreeStore, folders map[string]*gtk.TreeIter
 
 // Icons Pixbuf representation
 var (
-	imageFolder *gdk.Pixbuf = nil
+	imageFolder  *gdk.Pixbuf = nil
+	imageAccount *gdk.Pixbuf = nil
 )
 
 // Load the icon image data from file:
@@ -102,6 +103,11 @@ func init() {
 
 	var err error
 	imageFolder, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/folder.png", iconPath))
+	if err != nil {
+		log.Fatal("Unable to load image:", err)
+	}
+
+	imageAccount, err = gdk.PixbufNewFromFile(fmt.Sprintf("%s/account.png", iconPath))
 	if err != nil {
 		log.Fatal("Unable to load image:", err)
 	}

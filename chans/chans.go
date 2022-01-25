@@ -28,14 +28,31 @@ func Collect[T any](ch chan T) []T {
 // ChunksSplit groups values received from ch
 // in chunks of chunkLen size, and send each chunk to a
 // channel of slices.
-func ChunksSplit[T any](ch chan T, chunkLen int) chan []T {
+func ChunksSplit[T any](ch chan T, chunkSz int) chan []T {
 	if ch == nil {
 		return nil
 	}
 	res := make(chan []T)
-	/*for v := range ch {
-		res = append(res, v)
-	}*/
+	go func() {
+		for {
+			chunk := []T{}
+			var v T
+			isOpen := true
+			for i := 0; isOpen && i < chunkSz; i++ {
+				v, isOpen = <-ch
+				if !isOpen {
+					break
+				}
+
+				chunk = append(chunk, v)
+			}
+			res <- chunk
+			if !isOpen {
+				break
+			}
+
+		}
+	}()
 	return res
 }
 
