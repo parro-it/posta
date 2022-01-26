@@ -158,14 +158,7 @@ func (acc *Account) ListFolders(ctx context.Context) errs.Result[Folder] {
 
 func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result[Msg] {
 	res := errs.NewResult[Msg]()
-	// this function implements
-	// two goroutines that communicate through
-	// `msgChan`: the first one produces *imap.Message
-	// using a list of chunked Fetch calls.
-	// The second goroutine reads these imap.Message
-	// from the channel, transform them in Msg
-	// and send the Msg to result channel.
-	msgChan := make(chan *imap.Message)
+
 	var chunkSz uint32 = 50
 	var mbox *imap.MailboxStatus
 	c := BorrowClient(acc.Cfg.Name)
@@ -191,25 +184,35 @@ func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result
 
 	go func() {
 		defer c.Done()
+		defer close(res.Res)
 
 		if mbox, res.Err = c.Select(folder.Path, true); res.Err != nil {
-			close(msgChan)
 			return
 		}
 
 		if mbox.Messages == 0 {
-			close(msgChan)
 			return
 		}
-		var mux = chans.SimpleMux[*imap.Message]{Output: msgChan}
-		defer mux.Close()
+		//var mux = chans.SimpleMux[*imap.Message]{Output: msgChan}
+		//defer mux.Close()
 		for i := uint32(0); i <= mbox.Messages/chunkSz; i++ {
-			ch := make(chan *imap.Message)
-			mux.AddInputFrom(ch)
+			ch := make(chan *imap.Message, chunkSz)
+			//mux.AddInputFrom(ch)
 
 			fetchChunk(i, ch)
 			if res.Err != nil {
 				return
+			}
+
+			for msg := range ch {
+				res.Res <- msgFromImap(msg, acc, folder)
+				select {
+				case <-ctx.Done():
+					fmt.Printf("ListMessages on folder `%s` canceled.\n", folder.Path)
+					return
+				default:
+					continue
+				}
 			}
 
 			select {
@@ -223,13 +226,6 @@ func (acc *Account) ListMessages(ctx context.Context, folder Folder) errs.Result
 
 	}()
 
-	go func() {
-		defer close(res.Res)
-
-		for msg := range msgChan {
-			res.Res <- msgFromImap(msg, acc, folder)
-		}
-	}()
 	return res
 }
 
