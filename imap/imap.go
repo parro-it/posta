@@ -77,26 +77,12 @@ func (acc *Account) FetchBody(ctx context.Context, msg *Msg) error {
 	var ch chan *imap.Message
 	//for {
 	ch = make(chan *imap.Message, 1)
-	/*
-		err = c.Fetch(seqset, items, ch)
-			if err == nil {
-				break
-			}
-			if err.Error() == "short write" {
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
 
-			return err
-		}*/
 	if err = c.Fetch(seqset, items, ch); err != nil {
 		return err
 	}
 	res := <-ch
-	/*s, err := json.MarshalIndent(res.BodyStructure, "  ", "  ")
-	if err != nil {
-		panic(err)
-	}*/
+
 	r := res.GetBody(&section)
 	m, err := message.Read(r)
 	if message.IsUnknownCharset(err) {
@@ -282,6 +268,10 @@ func fetchBodyStructure(m *message.Entity) (bodyStructure, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
+			if message.IsUnknownCharset(err) {
+				continue
+			}
+
 			return bs, err
 		}
 
