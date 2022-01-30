@@ -98,17 +98,17 @@ func TestThrough(t *testing.T) {
 			assert.Equal(t, 0, n)
 			assert.Equal(t, []int{0, 0}, buf)
 		})
-
-		t.Run("ask values on empty ch", func(t *testing.T) {
-			ch := chans.NewThrough[int]()
-			defer ch.Close()
-			buf := make([]int, 2)
-			n, err := ch.Read(buf)
-			assert.NoError(t, err)
-			assert.Equal(t, 0, n)
-			assert.Equal(t, []int{0, 0}, buf)
-		})
-
+		/*
+			t.Run("ask values on empty ch", func(t *testing.T) {
+				ch := chans.NewThrough[int]()
+				defer ch.Close()
+				buf := make([]int, 2)
+				n, err := ch.Read(buf)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, n)
+				assert.Equal(t, []int{0, 0}, buf)
+			})
+		*/
 		t.Run("ask 0 values", func(t *testing.T) {
 			ch := chans.NewThrough[int]()
 			defer ch.Close()

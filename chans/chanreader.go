@@ -86,7 +86,16 @@ func NewChanReader[T any](options ...ChanOptionsFn[T]) (ChanReader[T], chan<- T)
 }
 
 func (t ChanReader[T]) Read(p []T) (n int, err error) {
-	for i := 0; i < len(p); i++ {
+	if len(p) == 0 || t == nil {
+		return 0, nil
+	}
+	v, ok := <-t
+	if !ok {
+		return 0, io.EOF
+	}
+	p[0] = v
+
+	for i := 1; i < len(p); i++ {
 		select {
 		case v, ok := <-t:
 			if !ok {

@@ -79,18 +79,18 @@ func TestChanReader(t *testing.T) {
 			assert.Equal(t, 0, n)
 			assert.Equal(t, []int{0, 0}, buf)
 		})
+		/*
+			t.Run("ask values on empty ch", func(t *testing.T) {
+				ch, w := chans.NewChanReader[int]()
+				defer close(w)
 
-		t.Run("ask values on empty ch", func(t *testing.T) {
-			ch, w := chans.NewChanReader[int]()
-			defer close(w)
-
-			buf := make([]int, 2)
-			n, err := ch.Read(buf)
-			assert.NoError(t, err)
-			assert.Equal(t, 0, n)
-			assert.Equal(t, []int{0, 0}, buf)
-		})
-
+				buf := make([]int, 2)
+				n, err := ch.Read(buf)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, n)
+				assert.Equal(t, []int{0, 0}, buf)
+			})
+		*/
 		t.Run("ask 0 values", func(t *testing.T) {
 			ch, w := chans.NewChanReader[int]()
 			defer close(w)
