@@ -7,28 +7,28 @@ import "io"
 // implements chans.Reader[T]
 type ChanReader[T any] <-chan T
 
-type newChanReaderOptions[T any] struct {
+type chanOptions[T any] struct {
 	capacity *int
 	initdata []T
 	source   <-chan T
 }
 
-type ChanReaderOptionsFn[T any] func(*newChanReaderOptions[T])
+type ChanOptionsFn[T any] func(*chanOptions[T])
 
-func PrefilledWith[T any](initdata ...T) ChanReaderOptionsFn[T] {
-	return func(o *newChanReaderOptions[T]) {
+func PrefilledWith[T any](initdata ...T) ChanOptionsFn[T] {
+	return func(o *chanOptions[T]) {
 		o.initdata = initdata
 	}
 }
 
-func FromChan[T any](source <-chan T) ChanReaderOptionsFn[T] {
-	return func(o *newChanReaderOptions[T]) {
+func FromChan[T any](source <-chan T) ChanOptionsFn[T] {
+	return func(o *chanOptions[T]) {
 		o.source = source
 	}
 }
 
-func WithCapacity[T any](capacity int) ChanReaderOptionsFn[T] {
-	return func(o *newChanReaderOptions[T]) {
+func WithCapacity[T any](capacity int) ChanOptionsFn[T] {
+	return func(o *chanOptions[T]) {
 		o.capacity = &capacity
 	}
 }
@@ -51,8 +51,8 @@ func WithCapacity[T any](capacity int) ChanReaderOptionsFn[T] {
    * WithCapacity - specifies a capacity for the channel. This
      option has no effects if a FromChan option is specified.
 */
-func NewChanReader[T any](options ...ChanReaderOptionsFn[T]) (ChanReader[T], chan<- T) {
-	var o newChanReaderOptions[T]
+func NewChanReader[T any](options ...ChanOptionsFn[T]) (ChanReader[T], chan<- T) {
+	var o chanOptions[T]
 
 	for _, opfn := range options {
 		opfn(&o)
