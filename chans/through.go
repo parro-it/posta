@@ -1,60 +1,71 @@
 package chans
 
-import "io"
+//type ThroughFunc[TIn any, TOut any] func(in TIn, out TOut)
 
-// Through is a chan thet implement
+type throughOptions[T any] struct {
+	capacity *int
+	initdata []T
+	r        <-chan T
+	w        chan<- T
+}
+
+type ThroughOptionsFn[T any] func(*throughOptions[T])
+
+/*
+func WithFunc[TIn any, TOut any](f ThroughFunc[TIn, TOut]) ThroughOptionsFn[TIn] {
+	return func(o *throughOptions[TIn]) {
+		//o.initdata = initdata
+	}
+}*/
+func WithInitData[T any](initdata ...T) ThroughOptionsFn[T] {
+	return func(o *throughOptions[T]) {
+		o.initdata = initdata
+	}
+}
+
+func WithCap[T any](capacity int) ThroughOptionsFn[T] {
+	return func(o *throughOptions[T]) {
+		o.capacity = &capacity
+	}
+}
+
+// Through is a chan that implement
 // io.Reader, io.Writer, io.Closer
 // when T is `byte`. Otherwise, the type
 // implements chans.Reader[T], chans.Writer[T], io.Closer
-type Through[T any] chan T
-
-// NewThrough return a newly unbuffered Through instance
-func NewThrough[T any]() Through[T] {
-	return make(Through[T])
+type Through[T any] struct {
+	Reader[T]
+	WriteCloser[T]
 }
 
-// NewThrough return a newly buffered Through instance
-// with a buffer size of `capacity`
-func NewBufThrough[T any](capacity int) Through[T] {
-	return make(Through[T], capacity)
-}
+// NewThrough return a newly Through instance
+func NewThrough[T any](options ...ThroughOptionsFn[T]) *Through[T] {
+	var o throughOptions[T]
 
-// NewPrefillThrough return a newly buffered Through instance
-// with a buffer size sufficient to cache `data` elements.
-// The buffer is then prefilled with all `data` elements.
-func NewPrefillThrough[T any](data ...T) Through[T] {
-	ch := make(Through[T], len(data))
-	for _, v := range data {
-		ch <- v
+	for _, opfn := range options {
+		opfn(&o)
 	}
-	return ch
-}
-
-func (t Through[T]) Read(p []T) (n int, err error) {
-	for i := 0; i < len(p); i++ {
-		select {
-		case v, ok := <-t:
-			if !ok {
-				return i, io.EOF
-			}
-			p[i] = v
-		default:
-			return i, nil
+	var capacity int
+	if o.capacity == nil {
+		if o.initdata != nil {
+			capacity = len(o.initdata)
+		}
+	} else {
+		capacity = *o.capacity
+		if o.initdata != nil && len(o.initdata) > capacity {
+			panic("NewThrough: invalid input, capacity not sufficient to store initial data.")
 		}
 	}
-	return len(p), nil
-}
 
-func (t Through[T]) Write(p []T) (n int, err error) {
-	for _, v := range p {
-		t <- v
-		n++
+	ch := make(chan T, capacity)
+	if o.initdata != nil {
+		for _, v := range o.initdata {
+			ch <- v
+		}
 	}
 
-	return
-}
-
-func (t Through[T]) Close() error {
-	close(t)
-	return nil
+	return &Through[T]{
+		ChanReader[T](ch),
+		ChanWriter[T](ch),
+	}
 }

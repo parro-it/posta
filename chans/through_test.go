@@ -6,7 +6,6 @@ import (
 
 	"github.com/parro-it/posta/chans"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestThrough(t *testing.T) {
@@ -16,20 +15,26 @@ func TestThrough(t *testing.T) {
 	var _ chans.Writer[empty] = chans.NewThrough[empty]()
 	t.Run("Write", func(t *testing.T) {
 		t.Run("2 values", func(t *testing.T) {
-			ch := chans.NewBufThrough[int](2)
+			ch := chans.NewThrough(chans.WithCap[int](2))
 			n, err := ch.Write([]int{41, 42})
 			assert.Equal(t, 2, n)
 			assert.NoError(t, err)
-			assert.Equal(t, 41, <-ch)
-			assert.Equal(t, 42, <-ch)
+			buf := make([]int, 2)
+			n, err = ch.Read(buf)
+			assert.Equal(t, []int{41, 42}, buf)
+			assert.Equal(t, 2, n)
+			assert.NoError(t, err)
 			ch.Close()
-			_, ok := <-ch
-			assert.False(t, ok)
+			n, err = ch.Read(buf)
+			assert.Equal(t, []int{41, 42}, buf)
+			assert.Equal(t, 0, n)
+			assert.Equal(t, io.EOF, err)
+
 		})
 	})
 	t.Run("Read", func(t *testing.T) {
 		t.Run("2 values", func(t *testing.T) {
-			ch := chans.NewPrefillThrough("uno", "due")
+			ch := chans.NewThrough(chans.WithInitData("uno", "due"))
 			defer ch.Close()
 			buf := make([]string, 2)
 			n, err := ch.Read(buf)
@@ -39,7 +44,7 @@ func TestThrough(t *testing.T) {
 		})
 
 		t.Run("ask more values then immediately present", func(t *testing.T) {
-			ch := chans.NewPrefillThrough("uno", "due")
+			ch := chans.NewThrough(chans.WithInitData("uno", "due"))
 			defer ch.Close()
 			buf := make([]string, 3)
 			n, err := ch.Read(buf)
@@ -49,7 +54,7 @@ func TestThrough(t *testing.T) {
 		})
 
 		t.Run("ask more values then present, ch closed", func(t *testing.T) {
-			ch := chans.NewPrefillThrough("uno", "due")
+			ch := chans.NewThrough(chans.WithInitData("uno", "due"))
 			ch.Close()
 			buf := make([]string, 3)
 			n, err := ch.Read(buf)
@@ -59,7 +64,7 @@ func TestThrough(t *testing.T) {
 		})
 
 		t.Run("ask less values then presents", func(t *testing.T) {
-			ch := chans.NewPrefillThrough("uno", "due", "tre")
+			ch := chans.NewThrough(chans.WithInitData("uno", "due", "tre"))
 			defer ch.Close()
 			buf := make([]string, 2)
 			n, err := ch.Read(buf)
@@ -69,7 +74,7 @@ func TestThrough(t *testing.T) {
 		})
 
 		t.Run("ask less values then presents, then others", func(t *testing.T) {
-			ch := chans.NewPrefillThrough("uno", "due", "tre")
+			ch := chans.NewThrough(chans.WithInitData("uno", "due", "tre"))
 			buf := make([]string, 2)
 			n, err := ch.Read(buf)
 			assert.NoError(t, err)
@@ -125,57 +130,59 @@ func TestThrough(t *testing.T) {
 		})
 
 		t.Run("pass nil buf", func(t *testing.T) {
-			ch := chans.NewPrefillThrough(42)
+			ch := chans.NewThrough(chans.WithInitData(42))
 			defer ch.Close()
 			n, err := ch.Read(nil)
 			assert.NoError(t, err)
 			assert.Equal(t, 0, n)
 		})
-
-		t.Run("use nil chan", func(t *testing.T) {
-			var ch chans.Through[int]
-			n, err := ch.Read(nil)
-			buf := make([]int, 2)
-			n, err = ch.Read(buf)
-			assert.NoError(t, err)
-			assert.Equal(t, 0, n)
+		/*
+			t.Run("use nil chan", func(t *testing.T) {
+				var ch chans.Through[int]
+				n, err := ch.Read(nil)
+				buf := make([]int, 2)
+				n, err = ch.Read(buf)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, n)
+			})*/
+	})
+	/*
+			t.Run("creation with make", func(t *testing.T) {
+				ch := make(chans.Through[int])
+				assert.NotNil(t, ch)
+				ch.Close()
+			})
+		t.Run("NewThrough", func(t *testing.T) {
+			ch := chans.NewThrough[int]()
+			assert.NotNil(t, ch)
+			assert.Equal(t, 0, cap(ch))
+			ch.Close()
 		})
-	})
+		t.Run("NewBufThrough", func(t *testing.T) {
+			ch := chans.NewThrough[int](chans.WithCapacity[int](42))
+			assert.NotNil(t, ch)
+			assert.Equal(t, 42, cap(ch))
+			ch.Close()
+		})
+		t.Run("NewPrefillThrough", func(t *testing.T) {
+			ch := chans.NewThrough(chans.WithInitData(41, 42))
+			assert.NotNil(t, ch)
+			select {
+			case v, ok := <-ch:
+				require.True(t, ok)
+				assert.Equal(t, 41, v)
+			default:
+				assert.Fail(t, "channel buffer is empty")
+			}
+			select {
+			case v, ok := <-ch:
+				require.True(t, ok)
+				assert.Equal(t, 42, v)
+			default:
+				assert.Fail(t, "channel buffer is empty")
+			}
+			ch.Close()
+		})
+	*/
 
-	t.Run("creation with make", func(t *testing.T) {
-		ch := make(chans.Through[int])
-		assert.NotNil(t, ch)
-		ch.Close()
-	})
-	t.Run("NewThrough", func(t *testing.T) {
-		ch := chans.NewThrough[int]()
-		assert.NotNil(t, ch)
-		assert.Equal(t, 0, cap(ch))
-		ch.Close()
-	})
-	t.Run("NewBufThrough", func(t *testing.T) {
-		ch := chans.NewBufThrough[int](42)
-		assert.NotNil(t, ch)
-		assert.Equal(t, 42, cap(ch))
-		ch.Close()
-	})
-	t.Run("NewPrefillThrough", func(t *testing.T) {
-		ch := chans.NewPrefillThrough(41, 42)
-		assert.NotNil(t, ch)
-		select {
-		case v, ok := <-ch:
-			require.True(t, ok)
-			assert.Equal(t, 41, v)
-		default:
-			assert.Fail(t, "channel buffer is empty")
-		}
-		select {
-		case v, ok := <-ch:
-			require.True(t, ok)
-			assert.Equal(t, 42, v)
-		default:
-			assert.Fail(t, "channel buffer is empty")
-		}
-		ch.Close()
-	})
 }

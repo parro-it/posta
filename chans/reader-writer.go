@@ -1,5 +1,7 @@
 package chans
 
+import "io"
+
 // Reader is the analogous of io.Reader, but for types other than `byte`.
 // T is the type parameter that represent the type of data readed.
 //
@@ -44,4 +46,33 @@ type Reader[T any] interface {
 // Implementations must not retain p.
 type Writer[T any] interface {
 	Write(p []T) (n int, err error)
+}
+
+// ReadWriter is the interface that groups the
+// basic Read and Write methods.
+type ReadWriter[T any] interface {
+	Reader[T]
+	Writer[T]
+}
+
+// ReadCloser is the interface that groups the
+// basic Read and Close methods.
+type ReadCloser[T any] interface {
+	Reader[T]
+	io.Closer
+}
+
+// WriteCloser is the interface that groups the
+// basic Write and Close methods.
+type WriteCloser[T any] interface {
+	Writer[T]
+	io.Closer
+}
+
+// ReadWriteCloser is the interface that groups
+// the basic Read, Write and Close methods.
+type ReadWriteCloser[T any] interface {
+	Reader[T]
+	Writer[T]
+	io.Closer
 }

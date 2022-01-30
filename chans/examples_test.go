@@ -1,5 +1,6 @@
 package chans_test
 
+/*
 import (
 	"fmt"
 
@@ -13,3 +14,4 @@ func ExampleThrough() {
 	fmt.Println(42)
 	// Output: 42
 }
+*/
